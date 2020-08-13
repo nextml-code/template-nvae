@@ -17,7 +17,7 @@ class Model(nn.Module):
 
         self.latent_channels = 20
         self.decoder = architecture.DecoderNVAE(
-            example_features=self.encoder(torch.zeros(1, 16, 16)),
+            example_features=self.encoder(torch.zeros(1, 28, 28)),
             latent_channels=self.latent_channels,
         )
 

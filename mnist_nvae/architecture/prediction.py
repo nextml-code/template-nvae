@@ -31,7 +31,7 @@ class Prediction(BaseModel):
 
     def image(self):
         return Image.fromarray(np.uint8(
-            (self.predicted_image.squeeze(0).cpu().numpy() + 1) / 2 * 255
+            self.predicted_image.squeeze(0).cpu().numpy()
         ))
 
     def representation(self):
@@ -72,7 +72,7 @@ class PredictionBatch(BaseModel):
     def loss(self, examples):
         return (
             self.mse(examples)
-            + 0.01 * sum(self.kl_losses)
+            + sum(self.kl_losses)
         )
 
     def mse(self, examples):
