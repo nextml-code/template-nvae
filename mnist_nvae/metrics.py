@@ -20,6 +20,13 @@ def train_metrics():
             epoch_bound=False,
             alpha=1e-7,
         ),
+        mse=ignite.metrics.RunningAverage(
+            output_transform=lambda output: (
+                output['predictions'].mse(output['examples'])
+            ),
+            epoch_bound=False,
+            alpha=1e-7,
+        ),
         kl=ignite.metrics.RunningAverage(
             output_transform=lambda output: (
                 torch.tensor(output['predictions'].kl_losses)
@@ -35,6 +42,9 @@ def evaluate_metrics():
         loss=ignite.metrics.Average(
             lambda output: output['loss']
         ),
+        mse=ignite.metrics.Average(lambda output: (
+            output['predictions'].mse(output['examples'])
+        )),
         kl=ignite.metrics.Average(lambda output: (
             torch.tensor(output['predictions'].kl_losses)
         )),
