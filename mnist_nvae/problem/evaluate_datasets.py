@@ -13,7 +13,7 @@ def MnistDataset(dataframe):
             Path(row['image_path']),
             row['class_name'],
         ))
-        .starmap(lambda image_path, class_name: problem.Example(
+        .starmap(lambda image_path, class_name: problem.Example.from_mnist(
             image=Image.open(image_path),
             class_name=class_name,
         ))

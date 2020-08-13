@@ -16,3 +16,5 @@ CLASS_NAMES = [
 
 TRAIN_CSV = Path('prepared/train.csv')
 TEST_CSV = Path('prepared/test.csv')
+
+HEIGHT, WIDTH = 64, 64

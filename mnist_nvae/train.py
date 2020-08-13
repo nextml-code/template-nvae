@@ -10,7 +10,7 @@ import logging
 import workflow
 from workflow import json
 from workflow.functional import starcompose
-from workflow.torch import set_seeds
+from workflow.torch import set_seeds, module_eval
 from workflow.ignite import worker_init
 from workflow.ignite.handlers.learning_rate import (
     LearningRateScheduler, warmup, cyclical
@@ -80,6 +80,7 @@ def train(config):
             collate_fn=tuple,
         )
         for name, datastream in datastream.evaluate_datastreams().items()
+        if 'gradient' not in name
     }
 
     trainer, evaluators, tensorboard_logger = workflow.ignite.trainer(
@@ -108,7 +109,7 @@ def train(config):
         config,
     ).attach(trainer, evaluators)
 
-    def log_examples(tag):
+    def log_examples(description):
         def log_examples_(engine, logger, event_name):
             n_examples = 5
             indices = np.random.choice(
@@ -116,12 +117,29 @@ def train(config):
                 n_examples,
                 replace=False,
             )
+
             logger.writer.add_images(
-                f'{tag}/predictions',
+                f'{description}/predictions',
                 np.expand_dims(np.stack([
-                    np.array(engine.state.output['predictions'][index].representation()) / 255
+                    np.concatenate([
+                        np.array(engine.state.output['examples'][index].representation()),
+                        np.array(engine.state.output['predictions'][index].representation()),
+                    ], axis=0) / 255
                     for index in indices
-                ]), -1),
+                ]), axis=-1),
+                trainer.state.epoch,
+                dataformats='NHWC',
+            )
+
+            with torch.no_grad(), module_eval(model) as eval_model:
+                samples = eval_model.generated(5)
+
+            logger.writer.add_images(
+                f'{description}/samples',
+                np.expand_dims(np.stack([
+                    np.array(sample.representation())
+                    for sample in samples
+                ]), axis=-1) / 255,
                 trainer.state.epoch,
                 dataformats='NHWC',
             )
@@ -132,11 +150,11 @@ def train(config):
         log_examples('train'),
         ignite.engine.Events.EPOCH_COMPLETED,
     )
-    tensorboard_logger.attach(
-        evaluators['evaluate_compare'],
-        log_examples('evaluate_compare'),
-        ignite.engine.Events.EPOCH_COMPLETED,
-    )
+
+    for name, evaluator in evaluators.items():
+        tensorboard_logger.attach(
+            evaluator, log_examples(name), ignite.engine.Events.EPOCH_COMPLETED
+        )
 
     if config.get('search_learning_rate', False):
 

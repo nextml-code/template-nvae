@@ -172,4 +172,4 @@ class DecoderNVAE(nn.Module):
         for relative_variational_block in self.relative_variational_blocks:
             head = relative_variational_block.generated(head)
 
-        return self.speech(head).squeeze(dim=1)
+        return self.image(head)

@@ -35,7 +35,9 @@ class Prediction(BaseModel):
         ))
 
     def representation(self):
-        return self.image().copy().resize((256, 256))
+        return self.image().copy().resize(
+            (problem.settings.WIDTH, problem.settings.HEIGHT)
+        )
 
     @property
     def _repr_png_(self):
@@ -72,7 +74,7 @@ class PredictionBatch(BaseModel):
     def loss(self, examples):
         return (
             self.mse(examples)
-            + sum(self.kl_losses)
+            + 100 * sum(self.kl_losses)
         )
 
     def mse(self, examples):

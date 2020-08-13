@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from workflow.torch import ModuleCompose, module_device
 
-from mnist_nvae import architecture
+from mnist_nvae import architecture, problem
 
 
 class Model(nn.Module):
@@ -12,12 +12,14 @@ class Model(nn.Module):
         super().__init__()
         self.encoder = ModuleCompose(
             lambda x: torch.stack([x], dim=1),
-            architecture.Encoder(32, levels=config['levels']),
+            architecture.Encoder(8, levels=config['levels']),
         )
 
         self.latent_channels = 20
         self.decoder = architecture.DecoderNVAE(
-            example_features=self.encoder(torch.zeros(1, 28, 28)),
+            example_features=self.encoder(torch.zeros(
+                1, problem.settings.HEIGHT, problem.settings.WIDTH
+            )),
             latent_channels=self.latent_channels,
         )
 
