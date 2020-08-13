@@ -1,0 +1,16 @@
+venv
+cache
+prepared
+tb
+input
+checkpoints
+*.pyc
+__pycache__/
+runs/
+tb/
+.vscode/
+*.csv
+*.pkl
+scratch.py
+*.pyc
+*.env

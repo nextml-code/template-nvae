@@ -1,0 +1,55 @@
+- package: mnist-nvae-package
+
+- model: mnist-nvae-model
+  sourcecode:
+    - '*.py'
+    - guild.yml
+    - exclude:
+        dir:
+          - input
+          - tb
+          - checkpoints
+  operations:
+    search_lr:
+      main: search_lr
+      flags-import: all
+      output-scalars: off
+      requires:
+        - prepared
+        - splits
+    train:
+      main: train
+      flags-import: all
+      output-scalars: off
+      requires:
+        - prepared
+        - splits
+    retrain:
+      main: train
+      flags-import: all
+      output-scalars: off
+      requires:
+        - model
+        - prepared
+        - splits
+    evaluate:
+      main: evaluate
+      flags-import: all
+      output-scalars: off
+      requires:
+        - model
+        - prepared
+        - splits
+  resources:
+    model:
+      name: model
+      path: model
+      sources:
+        - operation: train|retrain
+    prepared:
+      sources:
+        - prepared
+    splits:
+      path: mnist_nvae
+      sources:
+        - mnist_nvae/splits
