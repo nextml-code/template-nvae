@@ -20,11 +20,7 @@ class Variational(nn.Module):
         loss = -0.5 * (
             1 + log_variance - mean ** 2 - torch.exp(log_variance)
         )
-        return (
-            loss.flatten(start_dim=1)
-            .sum(dim=1)
-            .mean(dim=0)
-        )
+        return loss.mean()
 
     def forward(self, feature):
         mean, log_variance = self.variational_parameters(feature)
@@ -52,11 +48,7 @@ class RelativeVariational(nn.Module):
         loss = -0.5 * (
             1 + delta_log_variance - delta_mean ** 2 / var - delta_var
         )
-        return (
-            loss.flatten(start_dim=1)
-            .sum(dim=1)
-            .mean(dim=0)
-        )
+        return loss.mean()
 
     def forward(self, previous, feature):
         mean, log_variance = self.absolute_parameters(previous)

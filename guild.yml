@@ -10,13 +10,6 @@
           - tb
           - checkpoints
   operations:
-    search_lr:
-      main: search_lr
-      flags-import: all
-      output-scalars: off
-      requires:
-        - prepared
-        - splits
     train:
       main: train
       flags-import: all

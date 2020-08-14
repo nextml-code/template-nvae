@@ -27,7 +27,7 @@ def train(config):
     device = torch.device('cuda' if config['use_cuda'] else 'cpu')
 
     model = architecture.Model(config).to(device)
-    optimizer = torch.optim.Adam(
+    optimizer = torch.optim.Adamax(
         model.parameters(), lr=config['learning_rate']
     )
 
@@ -46,11 +46,13 @@ def train(config):
     ])
     print(f'n_parameters: {n_parameters:,}')
 
+    kl_weights = [config['kl_weight'] for _ in range(config['levels'])]
+
     def process_batch(examples):
         predictions = model.prediction(
             architecture.FeaturesBatch.from_examples(examples)
         )
-        return predictions, predictions.loss(examples)
+        return predictions, predictions.loss(examples, kl_weights)
 
 
     @workflow.ignite.decorators.train(model, optimizer)
@@ -80,7 +82,7 @@ def train(config):
             collate_fn=tuple,
         )
         for name, datastream in datastream.evaluate_datastreams().items()
-        if 'gradient' not in name
+        if 'compare' in name
     }
 
     trainer, evaluators, tensorboard_logger = workflow.ignite.trainer(
@@ -98,8 +100,13 @@ def train(config):
         optimizers=optimizer,
     )
 
+    # @trainer.on(ignite.Events.EPOCH_COMPLETED)
+    # def update_kl_weights(engine):
+    #     kl_weights.data *= 1.01
+
     workflow.ignite.handlers.ModelScore(
-        lambda: -evaluators['evaluate_early_stopping'].state.metrics['loss'],
+        # lambda: -evaluators['evaluate_early_stopping'].state.metrics['mse'],
+        lambda: trainer.state.epoch,
         train_state,
         {
             name: metrics.evaluate_metrics()
@@ -155,31 +162,6 @@ def train(config):
         tensorboard_logger.attach(
             evaluator, log_examples(name), ignite.engine.Events.EPOCH_COMPLETED
         )
-
-    if config.get('search_learning_rate', False):
-
-        def search(config):
-            def search_(step, multiplier):
-                return (
-                    step,
-                    (1 / config['minimum_learning_rate'])
-                    ** (step / config['n_batches'])
-                )
-            return search_
-
-        LearningRateScheduler(
-            optimizer,
-            search(config),
-        ).attach(trainer)
-
-    else:
-        LearningRateScheduler(
-            optimizer,
-            starcompose(
-                warmup(150),
-                cyclical(length=500),
-            ),
-        ).attach(trainer)
 
     # Avoid ReproducibleBatchSampler. Should be fixed in ignite==0.4.0
     ignite.engine.engine.ReproducibleBatchSampler.__iter__ = (
