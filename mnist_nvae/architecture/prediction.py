@@ -35,9 +35,7 @@ class Prediction(BaseModel):
         ))
 
     def representation(self):
-        return self.image().copy().resize(
-            (problem.settings.WIDTH, problem.settings.HEIGHT)
-        )
+        return self.image()
 
     @property
     def _repr_png_(self):

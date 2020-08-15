@@ -28,7 +28,7 @@ class Encoder(nn.Module):
         self.levels = nn.ModuleList([
             ModuleCompose(
                 nn.Conv2d(
-                    1 if level == 0 else channels * 2 ** (level - 1),
+                    3 if level == 0 else channels * 2 ** (level - 1),
                     channels * 2 ** level, 3,
                     stride=2,
                     padding=1

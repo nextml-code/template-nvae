@@ -6,32 +6,45 @@ from datastream import Dataset
 from mnist_nvae import problem
 
 
-def MnistDataset(dataframe):
+def dataframe():
     return (
-        Dataset.from_dataframe(dataframe)
-        .map(lambda row: (
-            Path(row['image_path']),
-            row['class_name'],
+        pd.DataFrame(dict(
+            image_path=problem.settings.data_path.glob('*.png'),
         ))
-        .starmap(lambda image_path, class_name: (
-            Image.open(image_path),
-            class_name,
-        ))
-        .cache('image_path')
-        .starmap(lambda image, class_name: problem.Example.from_mnist(
-            image=image,
-            class_name=class_name,
-        ))
+        .assign(
+            key=lambda df: df['image_path'].apply(
+                lambda image_path: image_path.stem
+            )
+        )
     )
 
 
-def evaluate_datasets():
-    # TODO: consider showing the standard case where there is no
-    # predetermined split
-    train_df = pd.read_csv(problem.settings.TRAIN_CSV)
-    test_df = pd.read_csv(problem.settings.TEST_CSV)
+def dataset(dataframe):
+    return (
+        Dataset.from_dataframe(dataframe)
+        .map(lambda row: row['image_path'])
+        .map(Path)
+        .map(Image.open)
+        .map(lambda image: problem.Example(image=image))
+        .cache('key')
+    )
 
+
+def evaluate_datasets(frozen=True):
+    datasets = (
+        dataset(dataframe())
+        .split(
+            key_column='key',
+            proportions=dict(train=0.8, compare=0.2),
+            filepath='mnist_nvae/splits/compare.json',
+            frozen=frozen,
+        )
+    )
+    # TODO: temporary
     return dict(
-        train=MnistDataset(train_df),
-        compare=MnistDataset(test_df.iloc[:100]),
+        train=datasets['train'],
+        compare=datasets['compare'].split(
+            key_column='key',
+            proportions=dict(keep=0.05, throw=0.95)
+        )['keep'],
     )

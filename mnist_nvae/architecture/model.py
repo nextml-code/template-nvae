@@ -10,15 +10,12 @@ from mnist_nvae import architecture, problem
 class Model(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.encoder = ModuleCompose(
-            lambda x: torch.stack([x], dim=1),
-            architecture.Encoder(8, levels=config['levels']),
-        )
+        self.encoder = architecture.Encoder(8, levels=config['levels'])
 
         self.latent_channels = 20
         self.decoder = architecture.DecoderNVAE(
             example_features=self.encoder(torch.zeros(
-                1, problem.settings.HEIGHT, problem.settings.WIDTH
+                1, 3, problem.settings.HEIGHT, problem.settings.WIDTH
             )),
             latent_channels=self.latent_channels,
         )
@@ -33,12 +30,11 @@ class Model(nn.Module):
         self.apply(add_sn)
 
     def forward(self, image_batch):
-        image_batch = image_batch.to(module_device(self))
+        image_batch = image_batch.permute(0, 3, 1, 2).to(module_device(self))
         features = self.encoder(image_batch)
         predicted_image, kl_losses = self.decoder(features)
-        # import pdb; pdb.set_trace()
         return architecture.PredictionBatch(
-            predicted_image=predicted_image,
+            predicted_image=predicted_image.permute(0, 2, 3, 1),
             kl_losses=kl_losses,
         )
 
@@ -53,5 +49,5 @@ class Model(nn.Module):
             self.decoder.latent_width,
         ))
         return architecture.PredictionBatch(
-            predicted_image=predicted_image,
+            predicted_image=predicted_image.permute(0, 2, 3, 1),
         )

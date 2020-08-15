@@ -48,10 +48,12 @@ def train(config):
     ])
     print(f'n_parameters: {n_parameters:,}')
 
-    kl_weights = [380, 472, 383, 262, 213]
+    kl_weights = [400, 471, 382, 261, 220]
     kl_pids = [PID(
-        -1.0, -0.1, -0.5, setpoint=0.1, output_limits=(0.1, 1e3),
-        auto_mode=False, sample_time=20,
+        -1.0, -0.1, -0.5,
+        setpoint=0.1,
+        output_limits=(0.1, 1e3),
+        auto_mode=False,
     ) for _ in range(config['levels'])]
     for pid, initial_weight in zip(kl_pids, kl_weights):
         pid.set_auto_mode(True, last_output=initial_weight)
@@ -60,8 +62,6 @@ def train(config):
         predictions = model.prediction(
             architecture.FeaturesBatch.from_examples(examples)
         )
-        for index, (pid, kl) in enumerate(zip(kl_pids, predictions.kl_losses)):
-            kl_weights[index] = pid(kl.item(), dt=1)
         return predictions, predictions.loss(examples, kl_weights)
 
 
@@ -69,6 +69,11 @@ def train(config):
     def train_batch(engine, examples):
         predictions, loss = process_batch(examples)
         loss.backward()
+
+        if engine.state.epoch >= 10 and engine.state.iteration % 5 == 1:
+            for index, (pid, kl) in enumerate(zip(kl_pids, predictions.kl_losses)):
+                kl_weights[index] = pid(kl.item(), dt=1)
+
         return dict(
             examples=examples,
             predictions=predictions.cpu().detach(),
@@ -137,13 +142,13 @@ def train(config):
 
             logger.writer.add_images(
                 f'{description}/predictions',
-                np.expand_dims(np.stack([
+                np.stack([
                     np.concatenate([
                         np.array(engine.state.output['examples'][index].representation()),
                         np.array(engine.state.output['predictions'][index].representation()),
                     ], axis=0) / 255
                     for index in indices
-                ]), axis=-1),
+                ]),
                 trainer.state.epoch,
                 dataformats='NHWC',
             )
@@ -153,10 +158,10 @@ def train(config):
 
             logger.writer.add_images(
                 f'{description}/samples',
-                np.expand_dims(np.stack([
+                np.stack([
                     np.array(sample.representation())
                     for sample in samples
-                ]), axis=-1) / 255,
+                ]) / 255,
                 trainer.state.epoch,
                 dataformats='NHWC',
             )

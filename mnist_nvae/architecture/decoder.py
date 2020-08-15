@@ -146,9 +146,9 @@ class DecoderNVAE(nn.Module):
         print('previous.shape:', previous.shape)
         self.image = ModuleCompose(
             nn.BatchNorm2d(previous.shape[1]),
-            nn.Conv2d(previous.shape[1], 1, kernel_size=1),
+            nn.Conv2d(previous.shape[1], 3, kernel_size=1),
             torch.sigmoid,
-            lambda x: x.squeeze(dim=1) * 255,
+            lambda x: x * 255,
         )
 
     def forward(self, features):

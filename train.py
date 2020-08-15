@@ -25,9 +25,8 @@ if __name__ == '__main__':
     parser.add_argument('--n_batches_per_epoch', default=200, type=int)
     parser.add_argument('--n_batches_per_step', default=1, type=int)
     parser.add_argument('--patience', type=float, default=40)
-    parser.add_argument('--n_workers', default=1, type=int)
+    parser.add_argument('--n_workers', default=0, type=int)
     parser.add_argument('--levels', default=5, type=int)
-    parser.add_argument('--kl_weight', default=1e1, type=float)
 
     try:
         __IPYTHON__

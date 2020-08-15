@@ -25,5 +25,5 @@ class FeaturesBatch(BaseModel):
         return FeaturesBatch(
             image_batch=torch.as_tensor(
                 [np.array(image) for image in images]
-            ).float(),
+            ).float()
         )

@@ -4,19 +4,11 @@ from datastream import Datastream
 from mnist_nvae.datastream import (
     evaluate_datastreams, augmenter
 )
-from mnist_nvae.problem import settings
 
 
-def GradientDatastream():
-    dataset = evaluate_datastreams()['gradient'].dataset
-    
+def GradientDatastream():    
     augmenter_ = augmenter()
     return (
-        Datastream.merge([
-            Datastream(dataset.subset(
-                lambda df: df['class_name'] == class_name
-            ))
-            for class_name in settings.CLASS_NAMES
-        ])
+        evaluate_datastreams()['gradient']
         .map(lambda example: example.augment(augmenter_))
     )

@@ -8,9 +8,8 @@ from mnist_nvae import problem
 def evaluate_datastreams(frozen=True):
     evaluate_datasets = problem.evaluate_datasets()
     evaluate_datasets['train'] = evaluate_datasets['train'].split(
-        key_column='index',
+        key_column='key',
         proportions=dict(gradient=0.8, early_stopping=0.2),
-        stratify_column='class_name',
         filepath='mnist_nvae/splits/early_stopping.json',
         frozen=frozen,
     )
