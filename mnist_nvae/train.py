@@ -16,8 +16,10 @@ from workflow.ignite.handlers.learning_rate import (
     LearningRateScheduler, warmup, cyclical
 )
 from datastream import Datastream
+from simple_pid import PID
 
 from mnist_nvae import datastream, architecture, metrics
+
 
 
 def train(config):
@@ -46,13 +48,20 @@ def train(config):
     ])
     print(f'n_parameters: {n_parameters:,}')
 
-    # kl_weights = [config['kl_weight'] for _ in range(config['levels'])]
     kl_weights = [380, 472, 383, 262, 213]
+    kl_pids = [PID(
+        -1.0, -0.1, -0.5, setpoint=0.1, output_limits=(0.1, 1e3),
+        auto_mode=False, sample_time=20,
+    ) for _ in range(config['levels'])]
+    for pid, initial_weight in zip(kl_pids, kl_weights):
+        pid.set_auto_mode(True, last_output=initial_weight)
 
     def process_batch(examples):
         predictions = model.prediction(
             architecture.FeaturesBatch.from_examples(examples)
         )
+        for index, (pid, kl) in enumerate(zip(kl_pids, predictions.kl_losses)):
+            kl_weights[index] = pid(kl.item(), dt=1)
         return predictions, predictions.loss(examples, kl_weights)
 
 
@@ -103,11 +112,6 @@ def train(config):
 
     @trainer.on(ignite.engine.Events.EPOCH_COMPLETED)
     def update_kl_weights(engine):
-        for index, kl in enumerate(engine.state.metrics['kl']):
-            if kl >= 0.5:
-                kl_weights[index] *= 1.05
-            elif kl <= 0.01:
-                kl_weights[index] *= 0.95
         print('\nkl_weights:', kl_weights)
 
     workflow.ignite.handlers.ModelScore(
