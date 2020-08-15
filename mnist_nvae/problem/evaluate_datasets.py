@@ -33,5 +33,5 @@ def evaluate_datasets():
 
     return dict(
         train=MnistDataset(train_df),
-        compare=MnistDataset(test_df),
+        compare=MnistDataset(test_df.iloc[:100]),
     )

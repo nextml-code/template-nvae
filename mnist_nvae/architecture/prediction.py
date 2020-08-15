@@ -75,7 +75,6 @@ class PredictionBatch(BaseModel):
         return (
             self.mse(examples)
             + sum([w * kl for w, kl in zip(kl_weights, self.kl_losses)])
-            # + torch.mean(kl_weights * torch.tensor(self.kl_losses))
         )
 
     def mse(self, examples):

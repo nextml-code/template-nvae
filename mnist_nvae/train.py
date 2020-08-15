@@ -46,7 +46,8 @@ def train(config):
     ])
     print(f'n_parameters: {n_parameters:,}')
 
-    kl_weights = [config['kl_weight'] for _ in range(config['levels'])]
+    # kl_weights = [config['kl_weight'] for _ in range(config['levels'])]
+    kl_weights = [380, 472, 383, 262, 213]
 
     def process_batch(examples):
         predictions = model.prediction(
@@ -100,9 +101,14 @@ def train(config):
         optimizers=optimizer,
     )
 
-    # @trainer.on(ignite.Events.EPOCH_COMPLETED)
-    # def update_kl_weights(engine):
-    #     kl_weights.data *= 1.01
+    @trainer.on(ignite.engine.Events.EPOCH_COMPLETED)
+    def update_kl_weights(engine):
+        for index, kl in enumerate(engine.state.metrics['kl']):
+            if kl >= 0.5:
+                kl_weights[index] *= 1.05
+            elif kl <= 0.01:
+                kl_weights[index] *= 0.95
+        print('\nkl_weights:', kl_weights)
 
     workflow.ignite.handlers.ModelScore(
         # lambda: -evaluators['evaluate_early_stopping'].state.metrics['mse'],
@@ -162,11 +168,6 @@ def train(config):
         tensorboard_logger.attach(
             evaluator, log_examples(name), ignite.engine.Events.EPOCH_COMPLETED
         )
-
-    # Avoid ReproducibleBatchSampler. Should be fixed in ignite==0.4.0
-    ignite.engine.engine.ReproducibleBatchSampler.__iter__ = (
-        lambda self: iter(self.batch_sampler)
-    )
 
     trainer.run(
         data=(

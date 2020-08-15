@@ -5,7 +5,12 @@
 virtualenv venv --python python3.8
 source venv/bin/activate
 pip install -r requirements.txt
-guild run prepare
+```
+
+## Prepare
+```
+python prepare.py
+python update_splits.py
 ```
 
 ## Training

@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch import nn
 from workflow.torch import module_device
@@ -17,16 +18,12 @@ class Variational(nn.Module):
 
     @staticmethod
     def kl(mean, log_variance):
-        loss = -0.5 * (
-            1 + log_variance - mean ** 2 - torch.exp(log_variance)
-        )
-        return loss.mean()
+        loss = -0.5 * (1 + log_variance - mean ** 2 - torch.exp(log_variance))
+        return loss.flatten(start_dim=1).sum(dim=1).mean(dim=0)
 
     def forward(self, feature):
         mean, log_variance = self.variational_parameters(feature)
-        # log_variance = torch.tanh(log_variance) * 5 # TODO: restore
         return (
-            # mean, # TODO: restore
             Variational.sample(mean, log_variance),
             Variational.kl(mean, log_variance),
         )
@@ -48,7 +45,7 @@ class RelativeVariational(nn.Module):
         loss = -0.5 * (
             1 + delta_log_variance - delta_mean ** 2 / var - delta_var
         )
-        return loss.mean()
+        return loss.flatten(start_dim=1).sum(dim=1).mean(dim=0)
 
     def forward(self, previous, feature):
         mean, log_variance = self.absolute_parameters(previous)
