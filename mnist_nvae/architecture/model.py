@@ -10,7 +10,7 @@ from mnist_nvae import architecture, problem
 class Model(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.encoder = architecture.Encoder(8, levels=config['levels'])
+        self.encoder = architecture.Encoder(16, levels=config['levels'])
 
         self.latent_channels = 20
         self.decoder = architecture.DecoderNVAE(

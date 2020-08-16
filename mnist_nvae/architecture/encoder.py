@@ -34,6 +34,7 @@ class Encoder(nn.Module):
                     padding=1
                 ),
                 EncoderCell(channels * 2 ** level),
+                EncoderCell(channels * 2 ** level),
             )
             for level in range(levels)
         ])

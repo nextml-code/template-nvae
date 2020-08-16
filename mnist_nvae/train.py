@@ -48,7 +48,8 @@ def train(config):
     ])
     print(f'n_parameters: {n_parameters:,}')
 
-    kl_weights = [400, 471, 382, 261, 220]
+    kl_weights = [550, 463, 463, 374, 374, 254, 254, 216, 216]
+    kl_weights = [kl * 0.01 for kl in kl_weights] # TODO: remove
     kl_pids = [PID(
         -1.0, -0.1, -0.5,
         setpoint=0.1,
@@ -70,9 +71,9 @@ def train(config):
         predictions, loss = process_batch(examples)
         loss.backward()
 
-        if engine.state.epoch >= 10 and engine.state.iteration % 5 == 1:
-            for index, (pid, kl) in enumerate(zip(kl_pids, predictions.kl_losses)):
-                kl_weights[index] = pid(kl.item(), dt=1)
+        # if engine.state.epoch >= 10 and engine.state.iteration % 5 == 1:
+        #     for index, (pid, kl) in enumerate(zip(kl_pids, predictions.kl_losses)):
+        #         kl_weights[index] = pid(kl.item(), dt=1)
 
         return dict(
             examples=examples,

@@ -66,7 +66,7 @@ def VariationalBlock(feature_shape, latent_channels):
     )
 
 
-def RelativeVariationalBlock(previous_shape, feature_shape, latent_channels):
+def RelativeVariationalBlock(previous_shape, feature_shape, latent_channels, upsample=True):
     channels = feature_shape[1]
     return module.RelativeVariationalBlock(
         # previous, feature -> sample
@@ -104,14 +104,19 @@ def RelativeVariationalBlock(previous_shape, feature_shape, latent_channels):
                 torch.cat([decoded_sample, previous], dim=1)
             ),
             DecoderCell(channels + previous_shape[1]),
-            nn.ConvTranspose2d(
-                channels + previous_shape[1],
-                channels // 2,
-                kernel_size=3,
-                stride=2,
-                padding=1,
-                output_padding=1
-            ),  # TODO: this will create a checkerboard artifact?
+            # TODO: this will create a checkerboard artifact?
+            (
+                nn.ConvTranspose2d(
+                    channels + previous_shape[1],
+                    channels // 2,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                    output_padding=1,
+                )
+                if upsample
+                else nn.Identity()
+            ),
         ),
     )
 
@@ -129,15 +134,16 @@ class DecoderNVAE(nn.Module):
 
         relative_variational_blocks = list()
         for example_feature in reversed(example_features[:-1]):
-            print('previous.shape:', previous.shape)
-            print('example_feature.shape:', example_feature.shape)
-            relative_variational_block = RelativeVariationalBlock(
-                previous.shape, example_feature.shape, latent_channels
-            )
-            previous, _ = relative_variational_block(
-                previous, example_feature
-            )
-            relative_variational_blocks.append(relative_variational_block)
+            for group_index in range(2):
+                print('previous.shape:', previous.shape)
+                print('example_feature.shape:', example_feature.shape)
+                relative_variational_block = RelativeVariationalBlock(
+                    previous.shape, example_feature.shape, latent_channels, group_index == 1
+                )
+                previous, _ = relative_variational_block(
+                    previous, example_feature
+                )
+                relative_variational_blocks.append(relative_variational_block)
 
         self.relative_variational_blocks = nn.ModuleList(
             relative_variational_blocks
@@ -145,6 +151,7 @@ class DecoderNVAE(nn.Module):
 
         print('previous.shape:', previous.shape)
         self.image = ModuleCompose(
+            DecoderCell(previous.shape[1]),
             nn.BatchNorm2d(previous.shape[1]),
             nn.Conv2d(previous.shape[1], 3, kernel_size=1),
             torch.sigmoid,
@@ -155,11 +162,13 @@ class DecoderNVAE(nn.Module):
         head, kl = self.variational_block(features[-1])
 
         kl_losses = [kl]
-        for feature, relative_variational_block in zip(
-            reversed(features[:-1]), self.relative_variational_blocks
-        ):
-            head, relative_kl = relative_variational_block(head, feature)
-            kl_losses.append(relative_kl)
+        for index, feature in enumerate(reversed(features[:-1])):
+            for inner_index in range(2):
+                relative_variational_block = (
+                    self.relative_variational_blocks[index * 2 + inner_index]
+                )
+                head, relative_kl = relative_variational_block(head, feature)
+                kl_losses.append(relative_kl)
         
         return (
             self.image(head),
