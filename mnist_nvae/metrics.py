@@ -32,7 +32,8 @@ def train_metrics():
                 torch.tensor(output['predictions'].kl_losses)
             ),
             epoch_bound=False,
-            alpha=1e-7,
+            # alpha=1e-7,
+            alpha=0.9,
         ),
     )
 

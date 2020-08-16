@@ -48,16 +48,14 @@ def train(config):
     ])
     print(f'n_parameters: {n_parameters:,}')
 
-    kl_weights = [550, 463, 463, 374, 374, 254, 254, 216, 216]
-    kl_weights = [kl * 0.01 for kl in kl_weights] # TODO: remove
+    kl_weights = [1e-4, 11000, 10000, 2.8, 24000, 85000, 88000, 289000, 196000]
     kl_pids = [PID(
-        -1.0, -0.1, -0.5,
-        setpoint=0.1,
-        output_limits=(0.1, 1e3),
+        -1.0, -0.5, -0.5,
+        setpoint=-2.5,
         auto_mode=False,
-    ) for _ in range(config['levels'])]
+    ) for _ in kl_weights]
     for pid, initial_weight in zip(kl_pids, kl_weights):
-        pid.set_auto_mode(True, last_output=initial_weight)
+        pid.set_auto_mode(True, last_output=np.log10(initial_weight))
 
     def process_batch(examples):
         predictions = model.prediction(
@@ -71,9 +69,10 @@ def train(config):
         predictions, loss = process_batch(examples)
         loss.backward()
 
-        # if engine.state.epoch >= 10 and engine.state.iteration % 5 == 1:
-        #     for index, (pid, kl) in enumerate(zip(kl_pids, predictions.kl_losses)):
-        #         kl_weights[index] = pid(kl.item(), dt=1)
+        # if engine.state.epoch >= 10 and engine.state.iteration % 50 == 0:
+        if engine.state.iteration % 50 == 0:
+            for index, (pid, kl) in enumerate(zip(kl_pids, predictions.kl_losses)):
+                kl_weights[index] = 10 ** pid(np.log10(kl.item()), dt=1)
 
         return dict(
             examples=examples,
