@@ -19,7 +19,7 @@ class Variational(nn.Module):
     @staticmethod
     def kl(mean, log_variance):
         loss = -0.5 * (1 + log_variance - mean ** 2 - torch.exp(log_variance))
-        return loss.flatten(start_dim=1).sum(dim=1).mean(dim=0)
+        # return loss.flatten(start_dim=1).sum(dim=1).mean(dim=0)
         return loss.mean()
 
     def forward(self, feature):

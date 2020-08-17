@@ -48,7 +48,7 @@ def train(config):
     ])
     print(f'n_parameters: {n_parameters:,}')
 
-    kl_weights = [1.8, 1009, 1331, 7422, 2906, 35718, 7958, 301485, 172319]   
+    kl_weights = [10, 1009, 1331, 7422, 2906, 35718, 7958, 301485, 172319]
     kl_pids = [PID(
         -1.0, -0.1, -0.5,
         setpoint=-3,
