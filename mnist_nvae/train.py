@@ -48,10 +48,10 @@ def train(config):
     ])
     print(f'n_parameters: {n_parameters:,}')
 
-    kl_weights = [1e-4, 11000, 10000, 2.8, 24000, 85000, 88000, 289000, 196000]
+    kl_weights = [1.8, 1009, 1331, 7422, 2906, 35718, 7958, 301485, 172319]   
     kl_pids = [PID(
-        -1.0, -0.5, -0.5,
-        setpoint=-2.5,
+        -1.0, -0.1, -0.5,
+        setpoint=-3,
         auto_mode=False,
     ) for _ in kl_weights]
     for pid, initial_weight in zip(kl_pids, kl_weights):
@@ -110,13 +110,13 @@ def train(config):
             **{
                 name: metrics.evaluate_metrics()
                 for name in evaluate_data_loaders.keys()
-            }
+            },
         ),
         optimizers=optimizer,
     )
 
     @trainer.on(ignite.engine.Events.EPOCH_COMPLETED)
-    def update_kl_weights(engine):
+    def log_kl_weights(engine):
         print('\nkl_weights:', kl_weights)
 
     workflow.ignite.handlers.ModelScore(
