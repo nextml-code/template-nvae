@@ -10,7 +10,7 @@ from workflow.ignite.handlers.learning_rate import (
     LearningRateScheduler, warmup, cyclical
 )
 
-from mnist_nvae import train
+from vae import train
 
 logging.getLogger('ignite').setLevel(logging.WARNING)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'

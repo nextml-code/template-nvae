@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from mnist_nvae.architecture import module
+from vae.architecture import module
 
 
 class RandomFourier(nn.Module):

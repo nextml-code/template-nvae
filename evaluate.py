@@ -31,7 +31,7 @@ from workflow.ignite.handlers import (
 )
 from datastream import Datastream
 
-from mnist_nvae import datastream, architecture, metrics
+from vae import datastream, architecture, metrics
 
 logging.getLogger('ignite').setLevel(logging.WARNING)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'

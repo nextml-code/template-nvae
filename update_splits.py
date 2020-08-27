@@ -1,5 +1,5 @@
-from mnist_nvae.problem import evaluate_datasets
-from mnist_nvae.datastream import evaluate_datastreams
+from vae.problem import evaluate_datasets
+from vae.datastream import evaluate_datastreams
 
 
 if __name__ == '__main__':

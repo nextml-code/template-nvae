@@ -43,6 +43,6 @@
       sources:
         - prepared
     splits:
-      path: mnist_nvae
+      path: vae
       sources:
-        - mnist_nvae/splits
+        - vae/splits

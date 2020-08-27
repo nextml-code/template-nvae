@@ -1,4 +1,4 @@
-# mnist_nvae
+# vae
 
 ## Installation
 ```

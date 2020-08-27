@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from datastream import Datastream
 
-from mnist_nvae import problem
+from vae import problem
 
 
 def evaluate_datastreams(frozen=True):
@@ -10,7 +10,7 @@ def evaluate_datastreams(frozen=True):
     evaluate_datasets['train'] = evaluate_datasets['train'].split(
         key_column='key',
         proportions=dict(gradient=0.8, early_stopping=0.2),
-        filepath='mnist_nvae/splits/early_stopping.json',
+        filepath='vae/splits/early_stopping.json',
         frozen=frozen,
     )
 

@@ -1,7 +1,7 @@
 import numpy as np
 from datastream import Datastream
 
-from mnist_nvae.datastream import (
+from vae.datastream import (
     evaluate_datastreams, augmenter
 )
 

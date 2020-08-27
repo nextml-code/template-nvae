@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from workflow.torch import ModuleCompose, module_device
 
-from mnist_nvae import architecture, problem
+from vae import architecture, problem
 
 
 class Model(nn.Module):

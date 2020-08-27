@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from workflow.torch import ModuleCompose
 
-from mnist_nvae.architecture import module
+from vae.architecture import module
 
 
 class EncoderCell(nn.Module):

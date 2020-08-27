@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from pydantic import BaseModel
 from typing import Tuple, Optional, List
 
-from mnist_nvae import problem
+from vae import problem
 
 
 def text_(draw, text, x, y, fill='black', outline='white', size=12):

@@ -3,7 +3,7 @@ import torch
 from torch import nn
 from workflow.torch import module_device
 
-from mnist_nvae.architecture import module
+from vae.architecture import module
 
 
 class Variational(nn.Module):

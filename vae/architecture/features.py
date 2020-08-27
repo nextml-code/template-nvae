@@ -4,7 +4,7 @@ import torch
 from PIL import Image
 from pydantic import BaseModel
 
-from mnist_nvae import problem
+from vae import problem
 
 
 class FeaturesBatch(BaseModel):

@@ -1,6 +1,6 @@
 from torch import nn
 
-from mnist_nvae import tools
+from vae import tools
 
 
 class CenterSliceResidual(nn.Module):

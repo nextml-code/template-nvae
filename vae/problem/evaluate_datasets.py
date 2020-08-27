@@ -3,7 +3,7 @@ from PIL import Image
 import pandas as pd
 from datastream import Dataset
 
-from mnist_nvae import problem
+from vae import problem
 
 
 def dataframe():
@@ -36,7 +36,7 @@ def evaluate_datasets(frozen=True):
         .split(
             key_column='key',
             proportions=dict(train=0.8, compare=0.2),
-            filepath='mnist_nvae/splits/compare.json',
+            filepath='vae/splits/compare.json',
             frozen=frozen,
         )
     )

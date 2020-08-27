@@ -18,7 +18,7 @@ from workflow.ignite.handlers.learning_rate import (
 from datastream import Datastream
 from simple_pid import PID
 
-from mnist_nvae import datastream, architecture, metrics
+from vae import datastream, architecture, metrics
 
 
 

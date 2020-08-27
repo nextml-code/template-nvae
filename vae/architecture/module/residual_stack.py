@@ -1,7 +1,7 @@
 from torch import nn
 from workflow.torch import ModuleCompose
 
-from mnist_nvae.architecture import module
+from vae.architecture import module
 
 
 def ResidualConvBlock(external_channels, internal_channels, dilation):

@@ -3,7 +3,7 @@ from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from pydantic import BaseModel
 
-from mnist_nvae.problem import settings
+from vae.problem import settings
 
 
 class Example(BaseModel):

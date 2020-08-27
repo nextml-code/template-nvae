@@ -4,7 +4,7 @@ import pandas as pd
 import torchvision
 from tqdm import tqdm
 
-from mnist_nvae import problem
+from vae import problem
 
 
 CACHE_ROOT = 'cache'
