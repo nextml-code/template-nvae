@@ -1,4 +1,7 @@
-# vae
+# Nouveau Variational Autoencoder (NVAE)
+Simple NVAE implementation to be used as template for training on other
+datasets. Intended for effective reuse and learning purposes. Will be improved
+on continually.
 
 ## Installation
 ```
