@@ -33,7 +33,7 @@ def train_metrics():
             ),
             epoch_bound=False,
             # alpha=1e-7,
-            alpha=0.9,
+            alpha=0.7,
         ),
         kl_weights=ignite.metrics.RunningAverage(
             output_transform=lambda output: (

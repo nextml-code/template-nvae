@@ -23,18 +23,24 @@ from vae import datastream, architecture, metrics
 
 
 class KLWeightController:
-    def __init__(self, weights, target):
+    def __init__(self, weights, targets):
         self.weights = np.array(weights, dtype=np.float32)
-        self.pids = [
+        self.targets = targets
+        self.pids = KLWeightController.new_pids(weights, targets)
+
+    @staticmethod
+    def new_pids(weights, targets):
+        pids = [
             PID(
-                -1.0, -0.1, -0.5,
+                -1.0, -0.1, -0.3,
                 setpoint=np.log10(target),
                 auto_mode=False,
             )
-            for _ in weights
+            for target in targets
         ]
-        for pid, initial_weight in zip(self.pids, self.weights):
-            pid.set_auto_mode(True, last_output=np.log10(initial_weight))
+        for pid, weight in zip(pids, weights):
+            pid.set_auto_mode(True, last_output=np.log10(weight))
+        return pids
 
     def update(self, kl_losses):
         for index, (pid, kl) in enumerate(zip(self.pids, kl_losses)):
@@ -46,10 +52,10 @@ class KLWeightController:
 
     def load_state_dict(self, state_dict):
         self.weights = state_dict['weights']
+        self.pids = KLWeightController.new_pids(self.weights, self.targets)
 
 
 def train(config):
-
     set_seeds(config['seed'])
 
     device = torch.device('cuda' if config['use_cuda'] else 'cpu')
@@ -60,7 +66,7 @@ def train(config):
     )
     kl_weight_controller = KLWeightController(
         weights=[737, 1713, 51, 464, 5352, 13203, 8205, 656, 1609],
-        target=0.01,
+        targets=[1e-2, 1e-2, 1e-2, 5e-3, 5e-3, 5e-3, 5e-3, 1e-3, 1e-3],
     )
 
     train_state = dict(
@@ -95,7 +101,8 @@ def train(config):
         predictions, loss = process_batch(examples)
         loss.backward()
 
-        if engine.state.epoch >= 10 and engine.state.iteration % 50 == 0:
+        # if engine.state.epoch >= 10 and engine.state.iteration % 50 == 0:
+        if engine.state.iteration % 50 == 0:
             kl_weight_controller.update(predictions.kl_losses)
 
         return dict(
