@@ -21,7 +21,6 @@ from simple_pid import PID
 from vae import datastream, architecture, metrics
 
 
-
 def train(config):
 
     set_seeds(config['seed'])
@@ -69,8 +68,7 @@ def train(config):
         predictions, loss = process_batch(examples)
         loss.backward()
 
-        # if engine.state.epoch >= 10 and engine.state.iteration % 50 == 0:
-        if engine.state.iteration % 50 == 0:
+        if engine.state.epoch >= 10 and engine.state.iteration % 50 == 0:
             for index, (pid, kl) in enumerate(zip(kl_pids, predictions.kl_losses)):
                 kl_weights[index] = 10 ** pid(np.log10(kl.item()), dt=1)
 
