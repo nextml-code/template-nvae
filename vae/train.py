@@ -4,6 +4,7 @@ import numpy as np
 import random
 import argparse
 import torch
+from torch import nn
 import torch.nn.functional as F
 import ignite
 import logging
@@ -21,6 +22,32 @@ from simple_pid import PID
 from vae import datastream, architecture, metrics
 
 
+class KLWeightController:
+    def __init__(self, weights, target):
+        self.weights = np.array(weights, dtype=np.float32)
+        self.pids = [
+            PID(
+                -1.0, -0.1, -0.5,
+                setpoint=np.log10(target),
+                auto_mode=False,
+            )
+            for _ in weights
+        ]
+        for pid, initial_weight in zip(self.pids, self.weights):
+            pid.set_auto_mode(True, last_output=np.log10(initial_weight))
+
+    def update(self, kl_losses):
+        for index, (pid, kl) in enumerate(zip(self.pids, kl_losses)):
+            self.weights[index] = 10 ** pid(np.log10(kl.item()), dt=1)
+        return self.weights
+
+    def state_dict(self):
+        return dict(weights=self.weights)
+
+    def load_state_dict(self, state_dict):
+        self.weights = state_dict['weights']
+
+
 def train(config):
 
     set_seeds(config['seed'])
@@ -31,15 +58,22 @@ def train(config):
     optimizer = torch.optim.Adamax(
         model.parameters(), lr=config['learning_rate']
     )
+    kl_weight_controller = KLWeightController(
+        weights=[737, 1713, 51, 464, 5352, 13203, 8205, 656, 1609],
+        target=0.01,
+    )
 
-    train_state = dict(model=model, optimizer=optimizer)
+    train_state = dict(
+        model=model,
+        optimizer=optimizer,
+        kl_weight_controller=kl_weight_controller,
+    )
 
     if os.path.exists('model'):
         print('Loading model checkpoint')
         workflow.ignite.handlers.ModelCheckpoint.load(
             train_state, 'model/checkpoints', device
         )
-
         workflow.torch.set_learning_rate(optimizer, config['learning_rate'])
 
     n_parameters = sum([
@@ -47,21 +81,14 @@ def train(config):
     ])
     print(f'n_parameters: {n_parameters:,}')
 
-    kl_weights = [10, 1009, 1331, 7422, 2906, 35718, 7958, 301485, 172319]
-    kl_pids = [PID(
-        -1.0, -0.1, -0.5,
-        setpoint=-3,
-        auto_mode=False,
-    ) for _ in kl_weights]
-    for pid, initial_weight in zip(kl_pids, kl_weights):
-        pid.set_auto_mode(True, last_output=np.log10(initial_weight))
-
     def process_batch(examples):
         predictions = model.prediction(
             architecture.FeaturesBatch.from_examples(examples)
         )
-        return predictions, predictions.loss(examples, kl_weights)
-
+        return (
+            predictions,
+            predictions.loss(examples, kl_weight_controller.weights),
+        )
 
     @workflow.ignite.decorators.train(model, optimizer)
     def train_batch(engine, examples):
@@ -69,15 +96,14 @@ def train(config):
         loss.backward()
 
         if engine.state.epoch >= 10 and engine.state.iteration % 50 == 0:
-            for index, (pid, kl) in enumerate(zip(kl_pids, predictions.kl_losses)):
-                kl_weights[index] = 10 ** pid(np.log10(kl.item()), dt=1)
+            kl_weight_controller.update(predictions.kl_losses)
 
         return dict(
             examples=examples,
             predictions=predictions.cpu().detach(),
             loss=loss,
+            kl_weights=kl_weight_controller.weights,
         )
-
 
     @workflow.ignite.decorators.evaluate(model)
     def evaluate_batch(engine, examples):
@@ -112,10 +138,6 @@ def train(config):
         ),
         optimizers=optimizer,
     )
-
-    @trainer.on(ignite.engine.Events.EPOCH_COMPLETED)
-    def log_kl_weights(engine):
-        print('\nkl_weights:', kl_weights)
 
     workflow.ignite.handlers.ModelScore(
         # lambda: -evaluators['evaluate_early_stopping'].state.metrics['mse'],

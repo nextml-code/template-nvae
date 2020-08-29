@@ -35,6 +35,13 @@ def train_metrics():
             # alpha=1e-7,
             alpha=0.9,
         ),
+        kl_weights=ignite.metrics.RunningAverage(
+            output_transform=lambda output: (
+                torch.tensor(output['kl_weights'])
+            ),
+            epoch_bound=False,
+            alpha=1e-7,
+        ),
     )
 
 
