@@ -37,7 +37,7 @@ if __name__ == '__main__':
     config = vars(args)
     config.update(
         seed=1,
-        use_cuda=True, # torch.cuda.is_available(),
+        use_cuda=True,  # torch.cuda.is_available(),
         run_id=os.getenv('RUN_ID'),
     )
 

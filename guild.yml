@@ -25,14 +25,6 @@
         - model
         - prepared
         - splits
-    evaluate:
-      main: evaluate
-      flags-import: all
-      output-scalars: off
-      requires:
-        - model
-        - prepared
-        - splits
   resources:
     model:
       name: model
