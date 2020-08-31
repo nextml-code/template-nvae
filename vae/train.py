@@ -32,7 +32,7 @@ class KLWeightController:
     def new_pids(weights, targets):
         pids = [
             PID(
-                -1.0, -0.1, -0.3,
+                -0.3, -0.0, -0.0,
                 setpoint=np.log10(target),
                 auto_mode=False,
             )
@@ -65,8 +65,12 @@ def train(config):
         model.parameters(), lr=config['learning_rate']
     )
     kl_weight_controller = KLWeightController(
-        weights=[737, 1713, 51, 464, 5352, 13203, 8205, 656, 1609],
-        targets=[1e-2, 1e-2, 1e-2, 5e-3, 5e-3, 5e-3, 5e-3, 1e-3, 1e-3],
+        weights=[
+            x // 1000 for x in [
+                1880, 6430, 6600, 15900, 17110, 56400, 56400, 156000, 156000
+            ]
+        ],
+        targets=[1e-2, 1e-2, 1e-2, 5e-3, 5e-3, 1e-3, 1e-3, 5e-4, 5e-4],
     )
 
     train_state = dict(
@@ -101,8 +105,8 @@ def train(config):
         predictions, loss = process_batch(examples)
         loss.backward()
 
-        # if engine.state.epoch >= 10 and engine.state.iteration % 50 == 0:
-        if engine.state.iteration % 50 == 0:
+        # if engine.state.epoch >= 10 and engine.state.iteration % 20 == 0:
+        if engine.state.iteration % 20 == 0:
             kl_weight_controller.update(predictions.kl_losses)
 
         return dict(
@@ -192,6 +196,37 @@ def train(config):
                 trainer.state.epoch,
                 dataformats='NHWC',
             )
+
+            with torch.no_grad(), module_eval(model) as eval_model:
+                partial_samples = [
+                    eval_model.partially_generated(
+                        architecture.FeaturesBatch.from_examples(
+                            [
+                                engine.state.output['examples'][index]
+                                for index in indices
+                            ]
+                        ).image_batch,
+                        sample=[
+                            index == sample_index
+                            for index in range(config['levels'] * 2 + 1)
+                        ],
+                    )
+                    for sample_index in range(config['levels'] * 2 + 1)
+                ]
+
+                logger.writer.add_images(
+                    f'{description}/partially_sampled',
+                    np.concatenate([
+                        np.stack([
+                            np.array(sample.representation())
+                            for sample in samples
+                        ])
+                        for samples in partial_samples
+                    ], axis=1) / 255,
+                    trainer.state.epoch,
+                    dataformats='NHWC',
+                )                    
+
         return log_examples_
     
     tensorboard_logger.attach(

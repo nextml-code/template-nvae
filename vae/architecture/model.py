@@ -51,3 +51,19 @@ class Model(nn.Module):
         return architecture.PredictionBatch(
             predicted_image=predicted_image.permute(0, 2, 3, 1),
         )
+
+    def partially_generated(self, image_batch, sample):
+        image_batch = image_batch.permute(0, 3, 1, 2).to(module_device(self))
+        predicted_image = self.decoder.partially_generated(
+            self.encoder(image_batch),
+            (
+                len(image_batch),
+                self.latent_channels,
+                self.decoder.latent_height,
+                self.decoder.latent_width,
+            ),
+            sample,
+        )
+        return architecture.PredictionBatch(
+            predicted_image=predicted_image.permute(0, 2, 3, 1),
+        )

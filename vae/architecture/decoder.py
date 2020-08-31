@@ -7,7 +7,6 @@ from workflow.torch import module_device, ModuleCompose
 
 from vae import tools
 from vae.architecture import module
-from vae.architecture.module import Swish
 
 
 class DecoderCell(nn.Module):
@@ -31,7 +30,7 @@ class DecoderCell(nn.Module):
         return x + self.seq(x)
 
 
-def VariationalBlock(feature_shape, latent_channels):
+def AbsoluteVariationalBlock(feature_shape, latent_channels):
     channels = feature_shape[1]
     return module.VariationalBlock(
         # feature -> sample
@@ -123,10 +122,10 @@ class DecoderNVAE(nn.Module):
     def __init__(self, example_features, latent_channels):
         super().__init__()
         print('example_feature.shape:', example_features[-1].shape)
-        self.variational_block = VariationalBlock(
+        self.absolute_variational_block = AbsoluteVariationalBlock(
             example_features[-1].shape, latent_channels
         )
-        previous, _ = self.variational_block(example_features[-1])
+        previous, _ = self.absolute_variational_block(example_features[-1])
         self.latent_height = example_features[-1].shape[-2]
         self.latent_width = example_features[-1].shape[-1]
 
@@ -157,7 +156,7 @@ class DecoderNVAE(nn.Module):
         )
 
     def forward(self, features):
-        head, kl = self.variational_block(features[-1])
+        head, kl = self.absolute_variational_block(features[-1])
 
         kl_losses = [kl]
         for index, feature in enumerate(reversed(features[:-1])):
@@ -174,9 +173,28 @@ class DecoderNVAE(nn.Module):
         )
 
     def generated(self, shape):
-        head = self.variational_block.generated(shape)
+        head = self.absolute_variational_block.generated(shape)
 
         for relative_variational_block in self.relative_variational_blocks:
             head = relative_variational_block.generated(head)
+
+        return self.image(head)
+
+    def partially_generated(self, features, shape, sample):
+        if sample[0]:
+            head = self.absolute_variational_block.generated(shape)
+        else:
+            head, _ = self.absolute_variational_block(features[-1])
+
+        for index, feature in enumerate(reversed(features[:-1])):
+            for inner_index in range(2):
+                relative_index = index * 2 + inner_index
+                relative_variational_block = (
+                    self.relative_variational_blocks[relative_index]
+                )
+                if sample[relative_index + 1]:
+                    head = relative_variational_block.generated(head)
+                else:
+                    head, _ = relative_variational_block(head, feature)
 
         return self.image(head)
