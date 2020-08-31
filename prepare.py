@@ -1,5 +1,6 @@
 import argparse
 from pathlib import Path
+import shutil
 import pandas as pd
 import torchvision
 from tqdm import tqdm
@@ -7,7 +8,7 @@ from tqdm import tqdm
 from vae import problem
 
 
-CACHE_ROOT = 'cache'
+CACHE_ROOT = Path('cache')
 
 
 def image_path(directory, index):
@@ -15,17 +16,27 @@ def image_path(directory, index):
 
 
 def save_images(dataset, directory):
-    size = (problem.settings.WIDTH, problem.settings.HEIGHT)
+    original_size = (178, 218)
+    crop_size = 148
+    left = (original_size[0] - crop_size) // 2
+    top = (original_size[1] - crop_size) // 2
+
     for index, (image, _) in enumerate(tqdm(dataset)):
-        image.resize(size).save(image_path(directory, index))
+        (
+            image.crop((left, top, left + crop_size, top + crop_size))
+            .resize((problem.settings.WIDTH, problem.settings.HEIGHT))
+            .save(image_path(directory, index))
+        )
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     args = parser.parse_args()
 
-    dataset = torchvision.datasets.CelebA(CACHE_ROOT, split='all', download=True)
+    dataset = torchvision.datasets.CelebA(CACHE_ROOT, split='all')
 
+    shutil.rmtree('prepared')
     directory = Path('prepared')
     directory.mkdir(parents=True)
     save_images(dataset, directory)
+    # shutil.rmtree(CACHE_ROOT)
