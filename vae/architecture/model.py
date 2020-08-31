@@ -10,14 +10,16 @@ from vae import architecture, problem
 class Model(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.encoder = architecture.Encoder(16, levels=config['levels'])
+        self.encoder = architecture.Encoder(8, levels=config['levels'])
 
         self.latent_channels = 20
+        self.level_sizes = [4 for index in range(config['levels'])]
         self.decoder = architecture.DecoderNVAE(
             example_features=self.encoder(torch.zeros(
                 1, 3, problem.settings.HEIGHT, problem.settings.WIDTH
             )),
             latent_channels=self.latent_channels,
+            level_sizes=self.level_sizes,
         )
 
         def add_sn(m):

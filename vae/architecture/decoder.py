@@ -50,10 +50,10 @@ def AbsoluteVariationalBlock(feature_shape, latent_channels):
         # decoded_sample -> upsample / previous
         upsample=ModuleCompose(
             DecoderCell(channels),
-            module.ConvPixelShuffle(
-                channels,
-                channels // 2,
-            ),
+            # module.ConvPixelShuffle(
+            #     channels,
+            #     channels // 2,
+            # ),
         ),
     )
 
@@ -101,14 +101,18 @@ def RelativeVariationalBlock(previous_shape, feature_shape, latent_channels, ups
                     channels // 2,
                 )
                 if upsample
-                else nn.Identity()
+                else nn.Conv2d(
+                    channels + previous_shape[1],
+                    channels,
+                    kernel_size=1,
+                )
             ),
         ),
     )
 
 
 class DecoderNVAE(nn.Module):
-    def __init__(self, example_features, latent_channels):
+    def __init__(self, example_features, latent_channels, level_sizes):
         super().__init__()
         print('example_feature.shape:', example_features[-1].shape)
         self.absolute_variational_block = AbsoluteVariationalBlock(
@@ -119,17 +123,29 @@ class DecoderNVAE(nn.Module):
         self.latent_width = example_features[-1].shape[-1]
 
         relative_variational_blocks = list()
-        for example_feature in reversed(example_features[:-1]):
-            for group_index in range(2):
+        for level_index, (level_size, example_feature) in enumerate(zip(
+            level_sizes, reversed(example_features)
+        )):
+            print('level_index:', level_index)
+            inner_blocks = list()
+            for block_index in range(
+                1 if level_index == 0 else 0, level_size
+            ):
+                print('block_index:', block_index)
                 print('previous.shape:', previous.shape)
                 print('example_feature.shape:', example_feature.shape)
+                
                 relative_variational_block = RelativeVariationalBlock(
-                    previous.shape, example_feature.shape, latent_channels, group_index == 1
+                    previous.shape,
+                    example_feature.shape,
+                    latent_channels,
+                    upsample=(block_index == (level_size - 1)),
                 )
                 previous, _ = relative_variational_block(
                     previous, example_feature
                 )
-                relative_variational_blocks.append(relative_variational_block)
+                inner_blocks.append(relative_variational_block)
+            relative_variational_blocks.append(nn.ModuleList(inner_blocks))
 
         self.relative_variational_blocks = nn.ModuleList(
             relative_variational_blocks
@@ -148,14 +164,13 @@ class DecoderNVAE(nn.Module):
         head, kl = self.absolute_variational_block(features[-1])
 
         kl_losses = [kl]
-        for index, feature in enumerate(reversed(features[:-1])):
-            for inner_index in range(2):
-                relative_variational_block = (
-                    self.relative_variational_blocks[index * 2 + inner_index]
-                )
-                head, relative_kl = relative_variational_block(head, feature)
+        for feature, blocks in zip(
+            reversed(features), self.relative_variational_blocks
+        ):
+            for block in blocks:
+                head, relative_kl = block(head, feature)
                 kl_losses.append(relative_kl)
-        
+
         return (
             self.image(head),
             kl_losses,
@@ -164,8 +179,9 @@ class DecoderNVAE(nn.Module):
     def generated(self, shape):
         head = self.absolute_variational_block.generated(shape)
 
-        for relative_variational_block in self.relative_variational_blocks:
-            head = relative_variational_block.generated(head)
+        for blocks in self.relative_variational_blocks:
+            for block in blocks:
+                head = block.generated(head)
 
         return self.image(head)
 
@@ -175,15 +191,13 @@ class DecoderNVAE(nn.Module):
         else:
             head, _ = self.absolute_variational_block(features[-1])
 
-        for index, feature in enumerate(reversed(features[:-1])):
-            for inner_index in range(2):
-                relative_index = index * 2 + inner_index
-                relative_variational_block = (
-                    self.relative_variational_blocks[relative_index]
-                )
-                if sample[relative_index + 1]:
-                    head = relative_variational_block.generated(head)
+        for feature, blocks, inner_sample in zip(
+            reversed(features), self.relative_variational_blocks, sample
+        ):
+            for block in blocks:
+                if inner_sample:
+                    head = block.generated(head)
                 else:
-                    head, _ = relative_variational_block(head, feature)
+                    head, _ = block(head, feature)
 
         return self.image(head)

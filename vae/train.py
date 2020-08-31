@@ -43,6 +43,9 @@ class KLWeightController:
         return pids
 
     def update(self, kl_losses):
+        if len(self.pids) != len(kl_losses):
+            raise ValueError('Expected same number of kl as pid controllers')
+
         for index, (pid, kl) in enumerate(zip(self.pids, kl_losses)):
             self.weights[index] = 10 ** pid(np.log10(kl.item()), dt=1)
         return self.weights
@@ -65,8 +68,20 @@ def train(config):
         model.parameters(), lr=config['learning_rate']
     )
     kl_weight_controller = KLWeightController(
-        weights=[1e-3 for _ in range(9)],
-        targets=[1e-2, 1e-2, 1e-2, 5e-3, 5e-3, 1e-3, 1e-3, 5e-4, 5e-4],
+        weights=sum([
+            [
+                1e2 * 2 ** level_index
+                for _ in range(level_size)
+            ]
+            for level_index, level_size in enumerate(model.level_sizes)
+        ], list()),
+        targets=sum([
+            [
+                10 ** (-2 - level_index * 0.5)
+                for _ in range(level_size)
+            ]
+            for level_index, level_size in enumerate(model.level_sizes)
+        ], list()),
     )
 
     train_state = dict(
@@ -101,8 +116,7 @@ def train(config):
         predictions, loss = process_batch(examples)
         loss.backward()
 
-        if engine.state.epoch >= 2 and engine.state.iteration % 20 == 0:
-        # if engine.state.iteration % 20 == 0:
+        if engine.state.iteration % 20 == 0 and engine.state.epoch > 5:
             kl_weight_controller.update(predictions.kl_losses)
 
         return dict(
@@ -147,7 +161,6 @@ def train(config):
     )
 
     workflow.ignite.handlers.ModelScore(
-        # lambda: -evaluators['evaluate_early_stopping'].state.metrics['mse'],
         lambda: trainer.state.epoch,
         train_state,
         {
@@ -171,8 +184,14 @@ def train(config):
                 f'{description}/predictions',
                 np.stack([
                     np.concatenate([
-                        np.array(engine.state.output['examples'][index].representation()),
-                        np.array(engine.state.output['predictions'][index].representation()),
+                        np.array(
+                            engine.state.output['examples'][index]
+                            .representation()
+                        ),
+                        np.array(
+                            engine.state.output['predictions'][index]
+                            .representation()
+                        ),
                     ], axis=0) / 255
                     for index in indices
                 ]),
@@ -203,11 +222,11 @@ def train(config):
                             ]
                         ).image_batch,
                         sample=[
-                            index >= sample_index
-                            for index in range(config['levels'] * 2 + 1)
+                            index == sample_index
+                            for index in range(config['levels'])
                         ],
                     )
-                    for sample_index in range(config['levels'] * 2 + 1)
+                    for sample_index in range(config['levels'])
                 ]
 
                 logger.writer.add_images(
