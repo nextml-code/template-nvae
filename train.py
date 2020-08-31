@@ -20,7 +20,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--eval_batch_size', type=int, default=64)
-    parser.add_argument('--learning_rate', type=float, default=1e-4)
+    parser.add_argument('--learning_rate', type=float, default=1e-3)
     parser.add_argument('--max_epochs', type=int, default=200)
     parser.add_argument('--n_batches_per_epoch', default=200, type=int)
     parser.add_argument('--n_batches_per_step', default=1, type=int)

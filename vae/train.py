@@ -32,7 +32,7 @@ class KLWeightController:
     def new_pids(weights, targets):
         pids = [
             PID(
-                -0.3, -0.0, -0.0,
+                -0.3, -0.1, -0.0,
                 setpoint=np.log10(target),
                 auto_mode=False,
             )
@@ -65,11 +65,7 @@ def train(config):
         model.parameters(), lr=config['learning_rate']
     )
     kl_weight_controller = KLWeightController(
-        weights=[
-            x // 1000 for x in [
-                1880, 6430, 6600, 15900, 17110, 56400, 56400, 156000, 156000
-            ]
-        ],
+        weights=[1e-3 for _ in range(9)],
         targets=[1e-2, 1e-2, 1e-2, 5e-3, 5e-3, 1e-3, 1e-3, 5e-4, 5e-4],
     )
 
@@ -105,8 +101,8 @@ def train(config):
         predictions, loss = process_batch(examples)
         loss.backward()
 
-        # if engine.state.epoch >= 10 and engine.state.iteration % 20 == 0:
-        if engine.state.iteration % 20 == 0:
+        if engine.state.epoch >= 2 and engine.state.iteration % 20 == 0:
+        # if engine.state.iteration % 20 == 0:
             kl_weight_controller.update(predictions.kl_losses)
 
         return dict(
@@ -207,7 +203,7 @@ def train(config):
                             ]
                         ).image_batch,
                         sample=[
-                            index == sample_index
+                            index >= sample_index
                             for index in range(config['levels'] * 2 + 1)
                         ],
                     )

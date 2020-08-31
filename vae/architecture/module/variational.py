@@ -24,6 +24,8 @@ class Variational(nn.Module):
 
     def forward(self, feature):
         mean, log_variance = self.variational_parameters(feature)
+        # print('absolute mean:', mean.view(-1)[:5])
+        # print('absolute log_variance:', log_variance.view(-1)[:5])
         return (
             Variational.sample(mean, log_variance),
             Variational.kl(mean, log_variance),
@@ -54,6 +56,8 @@ class RelativeVariational(nn.Module):
         delta_mean, delta_log_variance = self.relative_parameters(
             previous, feature
         )
+        # print('relative mean:', (mean + delta_mean).view(-1)[:5])
+        # print('relative log_variance:', (log_variance + delta_log_variance).view(-1)[:5])
         return (
             Variational.sample(
                 mean + delta_mean, log_variance + delta_log_variance

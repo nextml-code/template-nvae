@@ -5,7 +5,6 @@ import torch
 from torch.nn.utils import weight_norm
 from workflow.torch import module_device, ModuleCompose
 
-from vae import tools
 from vae.architecture import module
 
 
@@ -51,14 +50,10 @@ def AbsoluteVariationalBlock(feature_shape, latent_channels):
         # decoded_sample -> upsample / previous
         upsample=ModuleCompose(
             DecoderCell(channels),
-            nn.ConvTranspose2d(
+            module.ConvPixelShuffle(
                 channels,
                 channels // 2,
-                kernel_size=3,
-                stride=2,
-                padding=1,
-                output_padding=1
-            ),  # TODO: this will create a checkerboard artifact?
+            ),
         ),
     )
 
@@ -79,7 +74,6 @@ def RelativeVariationalBlock(previous_shape, feature_shape, latent_channels, ups
             # previous, feature -> relative_parameters
             relative_parameters=ModuleCompose(
                 lambda previous, feature: (
-                    # tools.center_slice_cat([previous, feature], dim=1)
                     torch.cat([previous, feature], dim=1)
                 ),
                 DecoderCell(previous_shape[1] + feature_shape[1]),
@@ -91,25 +85,20 @@ def RelativeVariationalBlock(previous_shape, feature_shape, latent_channels, ups
         ),
         # sample -> decoded_sample
         decoded_sample=ModuleCompose(
-            nn.Conv2d(latent_channels, channels, kernel_size=1),
+            module.RandomFourier(8),
+            nn.Conv2d(latent_channels + 8, channels, kernel_size=1),
             DecoderCell(channels),
         ),
         # decoded_sample, previous -> upsample / previous
         upsample=ModuleCompose(
             lambda decoded_sample, previous: (
-                # tools.center_slice_cat([decoded_sample, previous], dim=1)
                 torch.cat([decoded_sample, previous], dim=1)
             ),
             DecoderCell(channels + previous_shape[1]),
-            # TODO: this will create a checkerboard artifact?
             (
-                nn.ConvTranspose2d(
+                module.ConvPixelShuffle(
                     channels + previous_shape[1],
                     channels // 2,
-                    kernel_size=3,
-                    stride=2,
-                    padding=1,
-                    output_padding=1,
                 )
                 if upsample
                 else nn.Identity()
