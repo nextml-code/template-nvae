@@ -18,21 +18,32 @@ from workflow.ignite.handlers.learning_rate import (
 )
 from datastream import Datastream
 from simple_pid import PID
+from pydantic import BaseModel
+from typing import List
 
 from vae import datastream, architecture, metrics
 
 
-class KLWeightController:
+class KLWeightController(BaseModel):
+    weights: np.ndarray
+    targets: np.ndarray
+    pids: List[PID]
+
+    class Config:
+        arbitrary_types_allowed = True
+
     def __init__(self, weights, targets):
-        self.weights = np.array(weights, dtype=np.float32)
-        self.targets = targets
-        self.pids = KLWeightController.new_pids(weights, targets)
+        super().__init__(
+            weights=np.array(weights, dtype=np.float32),
+            targets=np.array(targets, dtype=np.float32),
+            pids=KLWeightController.new_pids(weights, targets),
+        )
 
     @staticmethod
     def new_pids(weights, targets):
         pids = [
             PID(
-                -0.3, -0.1, -0.0,
+                -1, -0.1, -0.0,
                 setpoint=np.log10(target),
                 auto_mode=False,
             )
@@ -42,7 +53,7 @@ class KLWeightController:
             pid.set_auto_mode(True, last_output=np.log10(weight))
         return pids
 
-    def update(self, kl_losses):
+    def update_(self, kl_losses):
         if len(self.pids) != len(kl_losses):
             raise ValueError('Expected same number of kl as pid controllers')
 
@@ -57,6 +68,14 @@ class KLWeightController:
         self.weights = state_dict['weights']
         self.pids = KLWeightController.new_pids(self.weights, self.targets)
 
+    def zero_(self):
+        self.weights = np.full_like(self.weights, 1e-3)
+        self.pids = KLWeightController.new_pids(self.weights, self.targets)
+    
+    def map_(self, fn):
+        self.weights = fn(self.weights)
+        self.pids = KLWeightController.new_pids(self.weights, self.targets)
+
 
 def train(config):
     set_seeds(config['seed'])
@@ -69,15 +88,20 @@ def train(config):
     )
     kl_weight_controller = KLWeightController(
         weights=sum([
-            [
-                1e2 * 2 ** level_index
-                for _ in range(level_size)
-            ]
+            [1e-3 for _ in range(level_size)]
             for level_index, level_size in enumerate(model.level_sizes)
         ], list()),
+        # weights=sum([
+        #     [
+        #         1e2 * 2 ** level_index
+        #         for _ in range(level_size)
+        #     ]
+        #     for level_index, level_size in enumerate(model.level_sizes)
+        # ], list()),
         targets=sum([
             [
-                10 ** (-2 - level_index * 0.5)
+                # 10 ** (-2 - level_index * 0.5)
+                10 ** (-3)
                 for _ in range(level_size)
             ]
             for level_index, level_size in enumerate(model.level_sizes)
@@ -96,6 +120,11 @@ def train(config):
             train_state, 'model/checkpoints', device
         )
         workflow.torch.set_learning_rate(optimizer, config['learning_rate'])
+
+    # kl_weight_controller.zero_()
+    # kl_weight_controller.map_(
+    #     lambda weights: weights * 1e-3
+    # )
 
     n_parameters = sum([
         p.shape.numel() for p in model.parameters() if p.requires_grad
@@ -116,8 +145,14 @@ def train(config):
         predictions, loss = process_batch(examples)
         loss.backward()
 
-        if engine.state.iteration % 20 == 0 and engine.state.epoch > 5:
-            kl_weight_controller.update(predictions.kl_losses)
+        # if engine.state.iteration % 20 == 0 and engine.state.epoch > 5:
+        if engine.state.iteration % 20 == 0:
+            kl_weight_controller.update_(predictions.kl_losses)
+
+        if engine.state.epoch % 20 == 0:
+            kl_weight_controller.map_(
+                lambda weights: weights * 1e-2
+            )
 
         return dict(
             examples=examples,
@@ -200,14 +235,20 @@ def train(config):
             )
 
             with torch.no_grad(), module_eval(model) as eval_model:
-                samples = eval_model.generated(5)
+                std_samples = [
+                    eval_model.generated(5, prior_std)
+                    for prior_std in np.linspace(0.3, 1, num=5)
+                ]
 
             logger.writer.add_images(
                 f'{description}/samples',
-                np.stack([
-                    np.array(sample.representation())
-                    for sample in samples
-                ]) / 255,
+                np.concatenate([
+                    np.stack([
+                        np.array(sample.representation())
+                        for sample in samples
+                    ])
+                    for samples in std_samples
+                ], axis=1) / 255,
                 trainer.state.epoch,
                 dataformats='NHWC',
             )
@@ -225,22 +266,23 @@ def train(config):
                             index == sample_index
                             for index in range(config['levels'])
                         ],
+                        prior_std=0.7,
                     )
                     for sample_index in range(config['levels'])
                 ]
 
-                logger.writer.add_images(
-                    f'{description}/partially_sampled',
-                    np.concatenate([
-                        np.stack([
-                            np.array(sample.representation())
-                            for sample in samples
-                        ])
-                        for samples in partial_samples
-                    ], axis=1) / 255,
-                    trainer.state.epoch,
-                    dataformats='NHWC',
-                )                    
+            logger.writer.add_images(
+                f'{description}/partially_sampled',
+                np.concatenate([
+                    np.stack([
+                        np.array(sample.representation())
+                        for sample in samples
+                    ])
+                    for samples in partial_samples
+                ], axis=1) / 255,
+                trainer.state.epoch,
+                dataformats='NHWC',
+            )                    
 
         return log_examples_
     

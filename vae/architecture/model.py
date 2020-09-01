@@ -10,10 +10,10 @@ from vae import architecture, problem
 class Model(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.encoder = architecture.Encoder(8, levels=config['levels'])
+        self.encoder = architecture.Encoder(16, levels=config['levels'])
 
         self.latent_channels = 20
-        self.level_sizes = [4 for index in range(config['levels'])]
+        self.level_sizes = [2 for index in range(config['levels'])]
         self.decoder = architecture.DecoderNVAE(
             example_features=self.encoder(torch.zeros(
                 1, 3, problem.settings.HEIGHT, problem.settings.WIDTH
@@ -43,18 +43,21 @@ class Model(nn.Module):
     def prediction(self, features_batch: architecture.FeaturesBatch):
         return self(features_batch.image_batch)
 
-    def generated(self, n_samples):
-        predicted_image = self.decoder.generated((
-            n_samples,
-            self.latent_channels,
-            self.decoder.latent_height,
-            self.decoder.latent_width,
-        ))
+    def generated(self, n_samples, prior_std):
+        predicted_image = self.decoder.generated(
+            (
+                n_samples,
+                self.latent_channels,
+                self.decoder.latent_height,
+                self.decoder.latent_width,
+            ),
+            prior_std,
+        )
         return architecture.PredictionBatch(
             predicted_image=predicted_image.permute(0, 2, 3, 1),
         )
 
-    def partially_generated(self, image_batch, sample):
+    def partially_generated(self, image_batch, sample, prior_std):
         image_batch = image_batch.permute(0, 3, 1, 2).to(module_device(self))
         predicted_image = self.decoder.partially_generated(
             self.encoder(image_batch),
@@ -65,6 +68,7 @@ class Model(nn.Module):
                 self.decoder.latent_width,
             ),
             sample,
+            prior_std,
         )
         return architecture.PredictionBatch(
             predicted_image=predicted_image.permute(0, 2, 3, 1),

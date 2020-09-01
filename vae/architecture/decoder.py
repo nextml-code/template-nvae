@@ -176,7 +176,7 @@ class DecoderNVAE(nn.Module):
             kl_losses,
         )
 
-    def generated(self, shape):
+    def generated(self, shape, prior_std):
         head = self.absolute_variational_block.generated(shape)
 
         for blocks in self.relative_variational_blocks:
@@ -185,7 +185,7 @@ class DecoderNVAE(nn.Module):
 
         return self.image(head)
 
-    def partially_generated(self, features, shape, sample):
+    def partially_generated(self, features, shape, sample, prior_std):
         if sample[0]:
             head = self.absolute_variational_block.generated(shape)
         else:
