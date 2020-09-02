@@ -177,17 +177,17 @@ class DecoderNVAE(nn.Module):
         )
 
     def generated(self, shape, prior_std):
-        head = self.absolute_variational_block.generated(shape)
+        head = self.absolute_variational_block.generated(shape, prior_std)
 
         for blocks in self.relative_variational_blocks:
             for block in blocks:
-                head = block.generated(head)
+                head = block.generated(head, prior_std)
 
         return self.image(head)
 
     def partially_generated(self, features, shape, sample, prior_std):
         if sample[0]:
-            head = self.absolute_variational_block.generated(shape)
+            head = self.absolute_variational_block.generated(shape, prior_std)
         else:
             head, _ = self.absolute_variational_block(features[-1])
 
@@ -196,7 +196,7 @@ class DecoderNVAE(nn.Module):
         ):
             for block in blocks:
                 if inner_sample:
-                    head = block.generated(head)
+                    head = block.generated(head, prior_std)
                 else:
                     head, _ = block(head, feature)
 

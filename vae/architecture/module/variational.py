@@ -31,8 +31,8 @@ class Variational(nn.Module):
             Variational.kl(mean, log_variance),
         )
 
-    def generated(self, shape):
-        return torch.randn(shape).to(module_device(self))
+    def generated(self, shape, prior_std):
+        return torch.randn(shape).to(module_device(self)) * prior_std
 
 
 class RelativeVariational(nn.Module):
@@ -67,9 +67,11 @@ class RelativeVariational(nn.Module):
             ),
         )
 
-    def generated(self, previous):
+    def generated(self, previous, prior_std):
         mean, log_variance = self.absolute_parameters(previous)
-        return Variational.sample(mean, log_variance)
+        return Variational.sample(
+            mean, log_variance + 2 * np.log(prior_std)
+        )
 
 
 class VariationalBlock(nn.Module):
@@ -86,10 +88,10 @@ class VariationalBlock(nn.Module):
         )
         return upsample, kl
 
-    def generated(self, shape):
+    def generated(self, shape, prior_std):
         return self.upsample(
             self.decoded_sample(
-                self.sample.generated(shape)
+                self.sample.generated(shape, prior_std)
             )
         )
 
@@ -109,10 +111,10 @@ class RelativeVariationalBlock(nn.Module):
         )
         return upsample, kl
 
-    def generated(self, previous):
+    def generated(self, previous, prior_std):
         return self.upsample(
             self.decoded_sample(
-                self.sample.generated(previous)
+                self.sample.generated(previous, prior_std)
             ),
             previous,
         )

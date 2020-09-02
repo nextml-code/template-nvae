@@ -43,6 +43,7 @@ class KLWeightController(BaseModel):
     def new_pids(weights, targets):
         pids = [
             PID(
+                # P = -1 gives oscillations, this is on purpose
                 -1, -0.1, -0.0,
                 setpoint=np.log10(target),
                 auto_mode=False,
@@ -100,8 +101,8 @@ def train(config):
         # ], list()),
         targets=sum([
             [
-                # 10 ** (-2 - level_index * 0.5)
-                10 ** (-3)
+                10 ** (-2.5 - level_index * 0.2)
+                # 10 ** (-3)
                 for _ in range(level_size)
             ]
             for level_index, level_size in enumerate(model.level_sizes)
@@ -149,10 +150,10 @@ def train(config):
         if engine.state.iteration % 20 == 0:
             kl_weight_controller.update_(predictions.kl_losses)
 
-        if engine.state.epoch % 20 == 0:
-            kl_weight_controller.map_(
-                lambda weights: weights * 1e-2
-            )
+        # if engine.state.epoch % 20 == 0:
+        #     kl_weight_controller.map_(
+        #         lambda weights: weights * 1e-2
+        #     )
 
         return dict(
             examples=examples,
@@ -236,19 +237,19 @@ def train(config):
 
             with torch.no_grad(), module_eval(model) as eval_model:
                 std_samples = [
-                    eval_model.generated(5, prior_std)
-                    for prior_std in np.linspace(0.3, 1, num=5)
+                    eval_model.generated(16, prior_std)
+                    for prior_std in np.linspace(0, 1, num=11)
                 ]
 
             logger.writer.add_images(
                 f'{description}/samples',
-                np.concatenate([
-                    np.stack([
+                np.stack([np.concatenate([
+                    np.concatenate([
                         np.array(sample.representation())
                         for sample in samples
-                    ])
+                    ], axis=1)
                     for samples in std_samples
-                ], axis=1) / 255,
+                ], axis=0)]) / 255,
                 trainer.state.epoch,
                 dataformats='NHWC',
             )
