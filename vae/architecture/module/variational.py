@@ -6,7 +6,7 @@ from workflow.torch import module_device
 from vae.architecture import module
 
 
-class Variational(nn.Module):
+class AbsoluteVariational(nn.Module):
     def __init__(self, parameters):
         super().__init__()
         self.variational_parameters = parameters
@@ -27,8 +27,8 @@ class Variational(nn.Module):
         # print('absolute mean:', mean.view(-1)[:5])
         # print('absolute log_variance:', log_variance.view(-1)[:5])
         return (
-            Variational.sample(mean, log_variance),
-            Variational.kl(mean, log_variance),
+            AbsoluteVariational.sample(mean, log_variance),
+            AbsoluteVariational.kl(mean, log_variance),
         )
 
     def generated(self, shape, prior_std):
@@ -59,7 +59,7 @@ class RelativeVariational(nn.Module):
         # print('relative mean:', (mean + delta_mean).view(-1)[:5])
         # print('relative log_variance:', (log_variance + delta_log_variance).view(-1)[:5])
         return (
-            Variational.sample(
+            AbsoluteVariational.sample(
                 mean + delta_mean, log_variance + delta_log_variance
             ),
             RelativeVariational.kl(
@@ -69,27 +69,27 @@ class RelativeVariational(nn.Module):
 
     def generated(self, previous, prior_std):
         mean, log_variance = self.absolute_parameters(previous)
-        return Variational.sample(
+        return AbsoluteVariational.sample(
             mean, log_variance + 2 * np.log(prior_std)
         )
 
 
-class VariationalBlock(nn.Module):
-    def __init__(self, sample, decoded_sample, upsample):
+class AbsoluteVariationalBlock(nn.Module):
+    def __init__(self, sample, decoded_sample, computed):
         super().__init__()
         self.sample = sample
         self.decoded_sample = decoded_sample
-        self.upsample = upsample
+        self.computed = computed
 
     def forward(self, head):
         sample, kl = self.sample(head)
-        upsample = self.upsample(
+        computed = self.computed(
             self.decoded_sample(sample)
         )
-        return upsample, kl
+        return computed, kl
 
     def generated(self, shape, prior_std):
-        return self.upsample(
+        return self.computed(
             self.decoded_sample(
                 self.sample.generated(shape, prior_std)
             )
@@ -97,22 +97,22 @@ class VariationalBlock(nn.Module):
 
 
 class RelativeVariationalBlock(nn.Module):
-    def __init__(self, sample, decoded_sample, upsample):
+    def __init__(self, sample, decoded_sample, computed):
         super().__init__()
         self.sample = sample
         self.decoded_sample = decoded_sample
-        self.upsample = upsample
+        self.computed = computed
 
     def forward(self, previous, feature):
         sample, kl = self.sample(previous, feature)
-        upsample = self.upsample(
+        computed = self.computed(
             self.decoded_sample(sample),
             previous,
         )
-        return upsample, kl
+        return computed, kl
 
     def generated(self, previous, prior_std):
-        return self.upsample(
+        return self.computed(
             self.decoded_sample(
                 self.sample.generated(previous, prior_std)
             ),

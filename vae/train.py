@@ -86,7 +86,7 @@ def train(config):
     )
     kl_weight_controller = KLWeightController(
         weights=sum([
-            [1e2 for _ in range(level_size)]
+            [1e0 for _ in range(level_size)]
             for level_index, level_size in enumerate(model.level_sizes)
         ], list()),
         # weights=sum([
