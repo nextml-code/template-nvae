@@ -45,8 +45,7 @@ class KLWeightController(BaseModel):
     def new_pids(weights, targets):
         pids = [
             PID(
-                # P = -1 gives oscillations, this is on purpose
-                -1, -0.1, -0.0,
+                -0.1, -0.1, -0.0,
                 setpoint=np.log10(target),
                 auto_mode=False,
             )
@@ -71,10 +70,6 @@ class KLWeightController(BaseModel):
         self.weights = state_dict['weights']
         self.pids = KLWeightController.new_pids(self.weights, self.targets)
 
-    def zero_(self):
-        self.weights = np.full_like(self.weights, 1e-3)
-        self.pids = KLWeightController.new_pids(self.weights, self.targets)
-    
     def map_(self, fn):
         self.weights = fn(self.weights)
         self.pids = KLWeightController.new_pids(self.weights, self.targets)
@@ -91,7 +86,7 @@ def train(config):
     )
     kl_weight_controller = KLWeightController(
         weights=sum([
-            [1e3 for _ in range(level_size)]
+            [1e2 for _ in range(level_size)]
             for level_index, level_size in enumerate(model.level_sizes)
         ], list()),
         # weights=sum([
@@ -103,8 +98,8 @@ def train(config):
         # ], list()),
         targets=sum([
             [
-                10 ** (-2.5 - level_index * 0.2)
-                # 10 ** (-3)
+                # 10 ** (-2.5 - level_index * 0.2)
+                10 ** (-3)
                 for _ in range(level_size)
             ]
             for level_index, level_size in enumerate(model.level_sizes)
@@ -124,9 +119,8 @@ def train(config):
         )
         workflow.torch.set_learning_rate(optimizer, config['learning_rate'])
 
-    # kl_weight_controller.zero_()
     # kl_weight_controller.map_(
-    #     lambda weights: weights * 1e-3
+    #     lambda weights: weights * 1e-2
     # )
 
     n_parameters = sum([
@@ -145,18 +139,16 @@ def train(config):
 
     @workflow.ignite.decorators.train(model, optimizer)
     def train_batch(engine, examples):
-        # with torch.cuda.amp.autocast():
         predictions, loss = process_batch(examples)
         loss.backward()
 
-        # if engine.state.iteration % 20 == 0 and engine.state.epoch > 5:
-        if engine.state.iteration % 20 == 0:
+        if engine.state.iteration >= 100 and engine.state.iteration % 20 == 0:
             kl_weight_controller.update_(predictions.kl_losses)
 
-        if engine.state.iteration % 2000 == 0:
-            kl_weight_controller.map_(
-                lambda weights: weights * 1e-2
-            )
+        # if engine.state.iteration % 4000 == 0:
+        #     kl_weight_controller.map_(
+        #         lambda weights: weights * 1e-1
+        #     )
 
         return dict(
             examples=examples,
@@ -167,7 +159,6 @@ def train(config):
 
     @workflow.ignite.decorators.evaluate(model)
     def evaluate_batch(engine, examples):
-        # with torch.cuda.amp.autocast():
         predictions, loss = process_batch(examples)
         return dict(
             examples=examples,

@@ -23,7 +23,12 @@ class FeaturesBatch(BaseModel):
     @staticmethod
     def from_images(images: List[Image.Image]):
         return FeaturesBatch(
-            image_batch=torch.as_tensor(
-                [np.array(image) for image in images]
-            ).float()
+            image_batch=(
+                torch.as_tensor(
+                    [np.array(image) for image in images]
+                )
+                .float()
+                .permute(0, 3, 1, 2)
+                / 255 * 2 - 1
+            )
         )

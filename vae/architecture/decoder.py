@@ -156,8 +156,7 @@ class DecoderNVAE(nn.Module):
             DecoderCell(previous.shape[1]),
             nn.BatchNorm2d(previous.shape[1]),
             nn.Conv2d(previous.shape[1], 3, kernel_size=1),
-            torch.sigmoid,
-            lambda x: x * 255,
+            torch.tanh,
         )
 
     def forward(self, features):

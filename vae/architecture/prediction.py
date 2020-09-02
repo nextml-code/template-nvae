@@ -18,7 +18,12 @@ class Prediction(BaseModel):
 
     def image(self):
         return Image.fromarray(np.uint8(
-            self.predicted_image.squeeze(0).cpu().numpy()
+            self.predicted_image
+            .permute(1, 2, 0)
+            .add(1)
+            .mul(255 / 2)
+            .cpu()
+            .numpy()
         ))
 
     def representation(self):
@@ -50,11 +55,16 @@ class PredictionBatch(BaseModel):
             yield self[index]
 
     def stack_images(self, examples):
-        return torch.from_numpy(
-            np.stack([
-                np.array(example.image) for example in examples
-            ])
-        ).to(self.predicted_image)
+        return (
+            torch.from_numpy(
+                np.stack([
+                    np.array(example.image) for example in examples
+                ])
+            )
+            .permute(0, 3, 1, 2)
+            .to(self.predicted_image)
+            / 255 * 2 - 1
+        )
 
     def loss(self, examples, kl_weights):
         return (

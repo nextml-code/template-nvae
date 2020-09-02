@@ -41,7 +41,6 @@ class Encoder(nn.Module):
         ])
 
     def forward(self, head):
-        head = head / 255 * 2 - 1
         features = list()
         for level in self.levels:
             head = level(head)

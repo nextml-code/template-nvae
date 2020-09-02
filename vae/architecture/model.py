@@ -32,11 +32,11 @@ class Model(nn.Module):
         self.apply(add_sn)
 
     def forward(self, image_batch):
-        image_batch = image_batch.permute(0, 3, 1, 2).to(module_device(self))
+        image_batch = image_batch.to(module_device(self))
         features = self.encoder(image_batch)
         predicted_image, kl_losses = self.decoder(features)
         return architecture.PredictionBatch(
-            predicted_image=predicted_image.permute(0, 2, 3, 1),
+            predicted_image=predicted_image,
             kl_losses=kl_losses,
         )
 
@@ -53,12 +53,10 @@ class Model(nn.Module):
             ),
             prior_std,
         )
-        return architecture.PredictionBatch(
-            predicted_image=predicted_image.permute(0, 2, 3, 1),
-        )
+        return architecture.PredictionBatch(predicted_image=predicted_image)
 
     def partially_generated(self, image_batch, sample, prior_std):
-        image_batch = image_batch.permute(0, 3, 1, 2).to(module_device(self))
+        image_batch = image_batch.to(module_device(self))
         predicted_image = self.decoder.partially_generated(
             self.encoder(image_batch),
             (
@@ -70,6 +68,4 @@ class Model(nn.Module):
             sample,
             prior_std,
         )
-        return architecture.PredictionBatch(
-            predicted_image=predicted_image.permute(0, 2, 3, 1),
-        )
+        return architecture.PredictionBatch(predicted_image=predicted_image)
