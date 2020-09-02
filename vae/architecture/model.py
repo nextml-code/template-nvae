@@ -10,10 +10,11 @@ from vae import architecture, problem
 class Model(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.encoder = architecture.Encoder(16, levels=config['levels'])
-
+        self.level_sizes = [1, 2, 4, 8, 16]
+        self.levels = len(self.level_sizes)
+        self.encoder = architecture.Encoder(32, levels=self.levels)
+        
         self.latent_channels = 20
-        self.level_sizes = [2 for index in range(config['levels'])]
         self.decoder = architecture.DecoderNVAE(
             example_features=self.encoder(torch.zeros(
                 1, 3, problem.settings.HEIGHT, problem.settings.WIDTH

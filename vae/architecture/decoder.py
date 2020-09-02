@@ -25,8 +25,9 @@ class DecoderCell(nn.Module):
             module.SqueezeExcitation(channels),
         )
 
+    @torch.cuda.amp.autocast()
     def forward(self, x):
-        return x + self.seq(x)
+        return (x + self.seq(x)).float()
 
 
 def AbsoluteVariationalBlock(feature_shape, latent_channels):
@@ -61,7 +62,7 @@ def RelativeVariationalBlock(previous_shape, feature_shape, latent_channels):
         sample=module.RelativeVariational(
             # previous -> absolute_parameters
             absolute_parameters=ModuleCompose(
-                DecoderCell(previous_shape[1]),
+                # DecoderCell(previous_shape[1]),
                 nn.Conv2d(previous_shape[1], channels, kernel_size=1),
                 module.Swish(),
                 nn.Conv2d(channels, latent_channels * 2, kernel_size=1),
@@ -72,7 +73,7 @@ def RelativeVariationalBlock(previous_shape, feature_shape, latent_channels):
                 lambda previous, feature: (
                     torch.cat([previous, feature], dim=1)
                 ),
-                DecoderCell(previous_shape[1] + feature_shape[1]),
+                # DecoderCell(previous_shape[1] + feature_shape[1]),
                 nn.Conv2d(previous_shape[1] + feature_shape[1], channels, kernel_size=1),
                 module.Swish(),
                 nn.Conv2d(channels, latent_channels * 2, kernel_size=1),

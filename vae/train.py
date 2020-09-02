@@ -45,7 +45,7 @@ class KLWeightController(BaseModel):
     def new_pids(weights, targets):
         pids = [
             PID(
-                -0.1, -0.1, -0.0,
+                -0.01, -0.01, -0.0,
                 setpoint=np.log10(target),
                 auto_mode=False,
             )
@@ -86,7 +86,7 @@ def train(config):
     )
     kl_weight_controller = KLWeightController(
         weights=sum([
-            [1e0 for _ in range(level_size)]
+            [1e-1 for _ in range(level_size)]
             for level_index, level_size in enumerate(model.level_sizes)
         ], list()),
         # weights=sum([
@@ -260,11 +260,11 @@ def train(config):
                         ).image_batch,
                         sample=[
                             index == sample_index
-                            for index in range(config['levels'])
+                            for index in range(model.levels)
                         ],
                         prior_std=0.7,
                     )
-                    for sample_index in range(config['levels'])
+                    for sample_index in range(model.levels)
                 ]
 
             logger.writer.add_images(
