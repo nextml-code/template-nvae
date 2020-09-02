@@ -14,13 +14,13 @@ class DecoderCell(nn.Module):
         expanded_channels = channels * 6
         self.seq = nn.Sequential(
             nn.BatchNorm2d(channels),
-            nn.Conv2d(channels, expanded_channels, kernel_size=1),
+            nn.Conv2d(channels, expanded_channels, kernel_size=1, bias=False),
             nn.BatchNorm2d(expanded_channels),
             module.Swish(),
-            nn.Conv2d(expanded_channels, expanded_channels, kernel_size=5, padding=2, groups=expanded_channels),
+            nn.Conv2d(expanded_channels, expanded_channels, kernel_size=5, padding=2, groups=expanded_channels, bias=False),
             nn.BatchNorm2d(expanded_channels),
             module.Swish(),
-            nn.Conv2d(expanded_channels, channels, kernel_size=1),
+            nn.Conv2d(expanded_channels, channels, kernel_size=1, bias=False),
             nn.BatchNorm2d(channels),
             module.SqueezeExcitation(channels),
         )
@@ -44,7 +44,7 @@ def AbsoluteVariationalBlock(feature_shape, latent_channels):
         ),
         # sample -> decoded_sample
         decoded_sample=ModuleCompose(
-            nn.Conv2d(latent_channels, channels, kernel_size=1),
+            nn.Conv2d(latent_channels, channels, kernel_size=1, bias=False),
             DecoderCell(channels),
         ),
         # decoded_sample -> upsample / previous
@@ -86,7 +86,7 @@ def RelativeVariationalBlock(previous_shape, feature_shape, latent_channels, ups
         # sample -> decoded_sample
         decoded_sample=ModuleCompose(
             module.RandomFourier(8),
-            nn.Conv2d(latent_channels + 8, channels, kernel_size=1),
+            nn.Conv2d(latent_channels + 8, channels, kernel_size=1, bias=False),
             DecoderCell(channels),
         ),
         # decoded_sample, previous -> upsample / previous

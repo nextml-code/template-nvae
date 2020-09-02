@@ -1,8 +1,9 @@
-- package: mnist-nvae-package
+- package: nvae-package
 
-- model: mnist-nvae-model
+- model: nvae-model
   sourcecode:
     - '*.py'
+    - 'vae/splits/*.json'
     - guild.yml
     - exclude:
         dir:
@@ -10,13 +11,16 @@
           - tb
           - checkpoints
   operations:
+    prepare:
+      main: prepare
+      flags-import: all
+      output-scalars: off
     train:
       main: train
       flags-import: all
       output-scalars: off
       requires:
         - prepared
-        - splits
     retrain:
       main: train
       flags-import: all
@@ -24,7 +28,6 @@
       requires:
         - model
         - prepared
-        - splits
   resources:
     model:
       name: model
@@ -32,9 +35,7 @@
       sources:
         - operation: train|retrain
     prepared:
+      name: prepared
+      path: .
       sources:
-        - prepared
-    splits:
-      path: vae
-      sources:
-        - vae/splits
+        - operation: prepare

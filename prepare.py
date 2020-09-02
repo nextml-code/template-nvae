@@ -33,10 +33,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     args = parser.parse_args()
 
-    dataset = torchvision.datasets.CelebA(CACHE_ROOT, split='all')
+    dataset = torchvision.datasets.CelebA(
+        CACHE_ROOT, split='all', download=True
+    )
 
-    shutil.rmtree('prepared')
     directory = Path('prepared')
     directory.mkdir(parents=True)
     save_images(dataset, directory)
-    # shutil.rmtree(CACHE_ROOT)
+    shutil.rmtree(CACHE_ROOT)

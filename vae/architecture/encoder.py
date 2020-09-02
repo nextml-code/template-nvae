@@ -11,7 +11,7 @@ class EncoderCell(nn.Module):
         self.seq = nn.Sequential(
             nn.BatchNorm2d(dim),
             module.Swish(),
-            nn.Conv2d(dim, dim, kernel_size=3, padding=1),
+            nn.Conv2d(dim, dim, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(dim),
             module.Swish(),
             nn.Conv2d(dim, dim, kernel_size=3, padding=1),
@@ -31,7 +31,8 @@ class Encoder(nn.Module):
                     3 if level == 0 else channels * 2 ** (level - 1),
                     channels * 2 ** level, 3,
                     stride=2,
-                    padding=1
+                    padding=1,
+                    bias=False,
                 ),
                 EncoderCell(channels * 2 ** level),
                 EncoderCell(channels * 2 ** level),

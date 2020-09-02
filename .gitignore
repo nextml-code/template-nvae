@@ -8,6 +8,7 @@ checkpoints
 __pycache__/
 runs/
 tb/
+build
 .vscode/
 *.csv
 *.pkl

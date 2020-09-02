@@ -23,6 +23,8 @@ from typing import List
 
 from vae import datastream, architecture, metrics
 
+torch.backends.cudnn.benchmark = True
+
 
 class KLWeightController(BaseModel):
     weights: np.ndarray
@@ -89,7 +91,7 @@ def train(config):
     )
     kl_weight_controller = KLWeightController(
         weights=sum([
-            [1e-3 for _ in range(level_size)]
+            [1e3 for _ in range(level_size)]
             for level_index, level_size in enumerate(model.level_sizes)
         ], list()),
         # weights=sum([
@@ -143,6 +145,7 @@ def train(config):
 
     @workflow.ignite.decorators.train(model, optimizer)
     def train_batch(engine, examples):
+        # with torch.cuda.amp.autocast():
         predictions, loss = process_batch(examples)
         loss.backward()
 
@@ -150,7 +153,7 @@ def train(config):
         if engine.state.iteration % 20 == 0:
             kl_weight_controller.update_(predictions.kl_losses)
 
-        if engine.state.epoch % 20 == 0 and engine.state.iteration == 0:
+        if engine.state.iteration % 2000 == 0:
             kl_weight_controller.map_(
                 lambda weights: weights * 1e-2
             )
@@ -164,6 +167,7 @@ def train(config):
 
     @workflow.ignite.decorators.evaluate(model)
     def evaluate_batch(engine, examples):
+        # with torch.cuda.amp.autocast():
         predictions, loss = process_batch(examples)
         return dict(
             examples=examples,
@@ -238,7 +242,7 @@ def train(config):
             with torch.no_grad(), module_eval(model) as eval_model:
                 std_samples = [
                     eval_model.generated(16, prior_std)
-                    for prior_std in np.linspace(0, 1, num=11)
+                    for prior_std in np.linspace(0.5, 1.5, num=11)
                 ]
 
             logger.writer.add_images(
