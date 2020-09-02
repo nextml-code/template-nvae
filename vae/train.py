@@ -150,10 +150,10 @@ def train(config):
         if engine.state.iteration % 20 == 0:
             kl_weight_controller.update_(predictions.kl_losses)
 
-        # if engine.state.epoch % 20 == 0:
-        #     kl_weight_controller.map_(
-        #         lambda weights: weights * 1e-2
-        #     )
+        if engine.state.epoch % 20 == 0 and engine.state.iteration == 0:
+            kl_weight_controller.map_(
+                lambda weights: weights * 1e-2
+            )
 
         return dict(
             examples=examples,
