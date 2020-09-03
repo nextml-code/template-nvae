@@ -10,7 +10,7 @@ from vae import architecture, problem
 class Model(nn.Module):
     def __init__(self, config):
         super().__init__()
-        self.level_sizes = [1, 2, 4, 8, 16]
+        self.level_sizes = [2, 2, 2, 4, 8]
         self.levels = len(self.level_sizes)
         self.encoder = architecture.Encoder(32, levels=self.levels)
         
@@ -23,14 +23,12 @@ class Model(nn.Module):
             level_sizes=self.level_sizes,
         )
 
-        def add_sn(m):
-            if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d)):
-                if len(m._forward_pre_hooks) == 0:
-                    return torch.nn.utils.spectral_norm(m)
-            else:
-                return m
-
-        self.apply(add_sn)
+        for module in self.modules():
+            if (
+                isinstance(module, (nn.Conv2d, nn.ConvTranspose2d))
+                and len(module._forward_pre_hooks) == 0
+            ):
+                torch.nn.utils.spectral_norm(module)
 
     def forward(self, image_batch):
         image_batch = image_batch.to(module_device(self))

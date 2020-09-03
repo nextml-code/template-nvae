@@ -1,14 +1,8 @@
 import argparse
 import os
 import logging
-from functools import partial
 import torch
 from workflow import json
-from workflow.functional import starcompose
-from workflow.ignite import worker_init
-from workflow.ignite.handlers.learning_rate import (
-    LearningRateScheduler, warmup, cyclical
-)
 
 from vae import train
 
@@ -18,13 +12,13 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=24)
-    parser.add_argument('--eval_batch_size', type=int, default=24)
-    parser.add_argument('--learning_rate', type=float, default=1e-3)
-    parser.add_argument('--max_epochs', type=int, default=200)
+    parser.add_argument('--batch_size', default=24, type=int)
+    parser.add_argument('--eval_batch_size', default=24, type=int)
+    parser.add_argument('--learning_rate', default=1e-3, type=float)
+    parser.add_argument('--max_epochs', default=200, type=int)
     parser.add_argument('--n_batches_per_epoch', default=200, type=int)
     parser.add_argument('--n_batches_per_step', default=1, type=int)
-    parser.add_argument('--patience', type=float, default=40)
+    parser.add_argument('--patience', default=40, type=float)
     parser.add_argument('--n_workers', default=0, type=int)
 
     try:

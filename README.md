@@ -3,6 +3,11 @@ Simple [NVAE](https://arxiv.org/abs/2007.03898) implementation to be used as
 template for training on other datasets. Intended for effective reuse and 
 learning purposes. Will be improved on continually.
 
+Images generated with prior standard deviation (aka temperature) from 0.1
+to 1.1 (top to bottom) after first updating batch norms with samples
+generated with prior standard deviation 0.85.
+![Generated images with different temperatures](assets/prior_std85.png)
+
 ## Installation
 ```
 virtualenv venv --python python3.8

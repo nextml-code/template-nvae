@@ -25,9 +25,10 @@ class DecoderCell(nn.Module):
             module.SqueezeExcitation(channels),
         )
 
-    @torch.cuda.amp.autocast()
+    # @torch.cuda.amp.autocast()
     def forward(self, x):
-        return (x + self.seq(x)).float()
+        # return (x + self.seq(x)).float()
+        return x + self.seq(x)
 
 
 def AbsoluteVariationalBlock(feature_shape, latent_channels):

@@ -1,16 +1,10 @@
 import os
 from functools import partial
 import numpy as np
-import random
-import argparse
 import torch
-from torch import nn
 import torch.nn.functional as F
 import ignite
-import logging
 import workflow
-from workflow import json
-from workflow.functional import starcompose
 from workflow.torch import set_seeds, module_eval
 from workflow.ignite import worker_init
 from workflow.ignite.handlers.learning_rate import (
@@ -45,7 +39,7 @@ class KLWeightController(BaseModel):
     def new_pids(weights, targets):
         pids = [
             PID(
-                -0.01, -0.01, -0.0,
+                -0.1, -0.1, -0.0,
                 setpoint=np.log10(target),
                 auto_mode=False,
             )
@@ -98,8 +92,8 @@ def train(config):
         # ], list()),
         targets=sum([
             [
-                # 10 ** (-2.5 - level_index * 0.2)
-                10 ** (-3)
+                10 ** (-2.8 - level_index * 0.1)
+                # 10 ** (-3)
                 for _ in range(level_size)
             ]
             for level_index, level_size in enumerate(model.level_sizes)
@@ -145,10 +139,10 @@ def train(config):
         if engine.state.iteration >= 100 and engine.state.iteration % 20 == 0:
             kl_weight_controller.update_(predictions.kl_losses)
 
-        # if engine.state.iteration % 4000 == 0:
-        #     kl_weight_controller.map_(
-        #         lambda weights: weights * 1e-1
-        #     )
+        if engine.state.iteration % 4000 == 0:
+            kl_weight_controller.map_(
+                lambda weights: weights * 1e-1
+            )
 
         return dict(
             examples=examples,
@@ -233,7 +227,7 @@ def train(config):
             with torch.no_grad(), module_eval(model) as eval_model:
                 std_samples = [
                     eval_model.generated(16, prior_std)
-                    for prior_std in np.linspace(0.5, 1.5, num=11)
+                    for prior_std in np.linspace(0.4, 1.1, num=8)
                 ]
 
             logger.writer.add_images(
