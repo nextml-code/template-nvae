@@ -16,21 +16,22 @@ pip install -r requirements.txt
 ```
 
 ## Prepare
+Downloads and prepares dataset in a folder like in a normal setting.
 ```
-python prepare.py
-python update_splits.py
+guild run prepare
 ```
 
 ## Training
 ```
 guild run train
+guild run retrain model=<model-hash>
+guild run generate model=<model-hash>
 ```
 
-These are some of the most relevant commands for guild:
+These are some of the most relevant guild commands:
 ```
 guild tensorboard 1
 guild runs
-guild retrain model=<model-hash>
 ```
 
 See the [guild docs](https://my.guild.ai/docs) for more information.
