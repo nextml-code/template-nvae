@@ -2,11 +2,11 @@ from itertools import product
 from PIL import Image, ImageFont, ImageDraw
 import numpy as np
 import torch
-import torch.nn.functional as F
 from pydantic import BaseModel
 from typing import Tuple, Optional, List
 
 from vae import problem
+from vae.architecture import module
 
 
 class Prediction(BaseModel):
@@ -68,15 +68,15 @@ class PredictionBatch(BaseModel):
 
     def loss(self, examples, kl_weights):
         return (
-            self.mse(examples)
+            self.mean_log_cosh(examples)
             + sum([w * kl for w, kl in zip(kl_weights, self.kl_losses)])
         )
 
-    def mse(self, examples):
-        return F.mse_loss(
-            input=self.predicted_image,
-            target=self.stack_images(examples),
-        )
+    def mean_log_cosh(self, examples):
+        return module.log_cosh(
+            self.predicted_image
+            - self.stack_images(examples)
+        ).mean()
 
     def cpu(self):
         return PredictionBatch(**{

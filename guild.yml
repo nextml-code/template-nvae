@@ -1,6 +1,6 @@
 - package: nvae-package
 
-- model: nvae-model
+- model: nvae-log-cosh
   sourcecode:
     - '*.py'
     - 'vae/splits/*.json'
