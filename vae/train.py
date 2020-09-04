@@ -92,8 +92,8 @@ def train(config):
         # ], list()),
         targets=sum([
             [
-                10 ** (-2.8 - level_index * 0.1)
-                # 10 ** (-3)
+                # 10 ** (-2.8 - level_index * 0.1)
+                10 ** (-3.2)
                 for _ in range(level_size)
             ]
             for level_index, level_size in enumerate(model.level_sizes)
@@ -112,10 +112,6 @@ def train(config):
             train_state, 'model/checkpoints', device
         )
         workflow.torch.set_learning_rate(optimizer, config['learning_rate'])
-
-    # kl_weight_controller.map_(
-    #     lambda weights: weights * 1e-2
-    # )
 
     n_parameters = sum([
         p.shape.numel() for p in model.parameters() if p.requires_grad

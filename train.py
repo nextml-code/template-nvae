@@ -12,8 +12,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_size', default=24, type=int)
-    parser.add_argument('--eval_batch_size', default=24, type=int)
+    parser.add_argument('--batch_size', default=20, type=int)
+    parser.add_argument('--eval_batch_size', default=20, type=int)
     parser.add_argument('--learning_rate', default=1e-3, type=float)
     parser.add_argument('--max_epochs', default=200, type=int)
     parser.add_argument('--n_batches_per_epoch', default=200, type=int)
