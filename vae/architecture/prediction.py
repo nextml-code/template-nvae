@@ -20,6 +20,7 @@ class Prediction(BaseModel):
     def image(self):
         return Image.fromarray(np.uint8(
             self.predicted_image
+            .clamp(-1, 1)
             .permute(1, 2, 0)
             .add(1)
             .mul(255 / 2)
@@ -54,17 +55,28 @@ class PredictionBatch(BaseModel):
                 torch.distributions.transforms.AffineTransform(0, 1.1),
             ],
         )
-        # return module.MixtureLogistic(self.logits, self.loc, self.scale)
 
     def __len__(self):
         return len(self.logits)
 
     def __getitem__(self, index):
-        return Prediction(
-            predicted_image=torch.median(
-                self.predicted_image.sample((20,)), dim=0
-            )[0][index],
+        distribution = torch.distributions.TransformedDistribution(
+            module.MixtureLogistic(
+                self.logits[index], self.loc[index], self.scale[index]
+            ),
+            [
+                torch.distributions.transforms.TanhTransform(),
+                torch.distributions.transforms.AffineTransform(0, 1.1),
+            ],
         )
+        samples = distribution.sample((50,)).clamp(-1, 1)
+        indices = distribution.log_prob(samples).argmax(dim=0)
+        most_likely_sample = (
+            samples.flatten(start_dim=1)
+            [indices.flatten(), torch.arange(indices.numel())]
+            .view(*samples.shape[1:])
+        )
+        return Prediction(predicted_image=most_likely_sample)
 
     def __iter__(self):
         for index in range(len(self)):
