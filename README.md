@@ -21,6 +21,9 @@ Downloads and prepares dataset in a folder like in a normal setting.
 guild run prepare
 ```
 
+_You may get an error saying "bad zip file". This means that the limit on
+downloading the celeba dataset has been reached._
+
 ## Training
 ```
 guild run train

@@ -1,6 +1,7 @@
 from functools import partial
 import numpy as np
-import torch.nn as nn
+from torch import nn
+import torch.nn.functional as F
 import torch
 from torch.nn.utils import weight_norm
 from workflow.torch import module_device, ModuleCompose
@@ -150,12 +151,26 @@ class DecoderNVAE(nn.Module):
         )
         self.upsampled_blocks = nn.ModuleList(upsampled_blocks)
 
+        self.n_mixture_components = 5
+
         print('previous.shape:', previous.shape)
         self.image = ModuleCompose(
             DecoderCell(previous.shape[1]),
             nn.BatchNorm2d(previous.shape[1]),
-            nn.Conv2d(previous.shape[1], 3, kernel_size=1),
-            torch.tanh,
+            nn.Conv2d(
+                previous.shape[1],
+                3 * 3 * self.n_mixture_components,
+                kernel_size=1,
+            ),
+            lambda x: x.view(-1, 3, 3 * self.n_mixture_components, 64, 64),  # TODO: replace with height width from settings
+            lambda x: x.permute(0, 1, 3, 4, 2),
+            lambda x: x.chunk(3, dim=-1),
+            lambda logits, loc, unlimited_scale: (
+                logits,
+                loc,
+                # torch.tanh(unlimited_loc),
+                F.softplus(unlimited_scale),
+            ),
         )
 
     def forward(self, features):

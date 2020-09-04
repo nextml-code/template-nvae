@@ -15,8 +15,6 @@
       main: prepare
       flags-import: all
       output-scalars: off
-      requires:
-        - cached
     train:
       main: train
       flags-import: all
@@ -47,7 +45,3 @@
       path: .
       sources:
         - operation: prepare
-    cached:
-      path: .
-      sources:
-        - cache

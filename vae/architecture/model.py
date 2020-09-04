@@ -33,9 +33,11 @@ class Model(nn.Module):
     def forward(self, image_batch):
         image_batch = image_batch.to(module_device(self))
         features = self.encoder(image_batch)
-        predicted_image, kl_losses = self.decoder(features)
+        (logits, loc, scale), kl_losses = self.decoder(features)
         return architecture.PredictionBatch(
-            predicted_image=predicted_image,
+            logits=logits,
+            loc=loc,
+            scale=scale,
             kl_losses=kl_losses,
         )
 
@@ -43,7 +45,7 @@ class Model(nn.Module):
         return self(features_batch.image_batch)
 
     def generated(self, n_samples, prior_std):
-        predicted_image = self.decoder.generated(
+        logits, loc, scale = self.decoder.generated(
             (
                 n_samples,
                 self.latent_channels,
@@ -52,11 +54,15 @@ class Model(nn.Module):
             ),
             prior_std,
         )
-        return architecture.PredictionBatch(predicted_image=predicted_image)
+        return architecture.PredictionBatch(
+            logits=logits,
+            loc=loc,
+            scale=scale,
+        )
 
     def partially_generated(self, image_batch, sample, prior_std):
         image_batch = image_batch.to(module_device(self))
-        predicted_image = self.decoder.partially_generated(
+        logits, loc, scale = self.decoder.partially_generated(
             self.encoder(image_batch),
             (
                 len(image_batch),
@@ -67,4 +73,8 @@ class Model(nn.Module):
             sample,
             prior_std,
         )
-        return architecture.PredictionBatch(predicted_image=predicted_image)
+        return architecture.PredictionBatch(
+            logits=logits,
+            loc=loc,
+            scale=scale,
+        )

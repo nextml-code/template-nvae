@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import Tuple, Optional, List
 
 from vae import problem
+from vae.architecture import module
 
 
 class Prediction(BaseModel):
@@ -35,19 +36,34 @@ class Prediction(BaseModel):
 
 
 class PredictionBatch(BaseModel):
-    predicted_image: torch.Tensor
+    logits: torch.Tensor
+    loc: torch.Tensor
+    scale: torch.Tensor
     kl_losses: Optional[List[torch.Tensor]]
 
     class Config:
         arbitrary_types_allowed = True
         allow_mutation = False
 
+    @property
+    def predicted_image(self):
+        return torch.distributions.TransformedDistribution(
+            module.MixtureLogistic(self.logits, self.loc, self.scale),
+            [
+                torch.distributions.transforms.TanhTransform(cache_size=1),
+                torch.distributions.transforms.AffineTransform(0, 1.1),
+            ],
+        )
+        # return module.MixtureLogistic(self.logits, self.loc, self.scale)
+
     def __len__(self):
-        return len(self.predicted_image)
+        return len(self.logits)
 
     def __getitem__(self, index):
         return Prediction(
-            predicted_image=self.predicted_image[index],
+            predicted_image=torch.median(
+                self.predicted_image.sample((20,)), dim=0
+            )[0][index],
         )
 
     def __iter__(self):
@@ -62,21 +78,20 @@ class PredictionBatch(BaseModel):
                 ])
             )
             .permute(0, 3, 1, 2)
-            .to(self.predicted_image)
+            .to(self.logits)
             / 255 * 2 - 1
         )
 
     def loss(self, examples, kl_weights):
         return (
-            self.mse(examples)
+            -self.log_prob(examples)
             + sum([w * kl for w, kl in zip(kl_weights, self.kl_losses)])
         )
 
-    def mse(self, examples):
-        return F.mse_loss(
-            input=self.predicted_image,
-            target=self.stack_images(examples),
-        )
+    def log_prob(self, examples):
+        return self.predicted_image.log_prob(
+            self.stack_images(examples)
+        ).mean()
 
     def cpu(self):
         return PredictionBatch(**{
