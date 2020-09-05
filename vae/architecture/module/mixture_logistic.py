@@ -8,12 +8,17 @@ from torch.distributions.transforms import (
 )
 
 
-def Logistic(loc, scale):
-    return TransformedDistribution(
-        # D.Uniform(0, 1).expand(loc.shape),
-        D.Uniform(torch.zeros_like(loc), 1),
-        [SigmoidTransform().inv, AffineTransform(loc=loc, scale=scale)]
-    )
+class Logistic(TransformedDistribution):
+    def __init__(self, loc, scale):
+        super().__init__(
+            D.Uniform(torch.zeros_like(loc), 1),
+            [SigmoidTransform().inv, AffineTransform(loc=loc, scale=scale)]
+        )
+        self.loc = loc
+
+    @property
+    def mean(self):
+        return self.loc
 
 
 def MixtureLogistic(logits, loc, scale):
