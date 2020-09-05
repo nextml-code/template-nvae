@@ -6,6 +6,7 @@ import torch
 from torch.nn.utils import weight_norm
 from workflow.torch import module_device, ModuleCompose
 
+from vae.problem import settings
 from vae.architecture import module
 
 
@@ -162,13 +163,15 @@ class DecoderNVAE(nn.Module):
                 3 * 3 * self.n_mixture_components,
                 kernel_size=1,
             ),
-            lambda x: x.view(-1, 3, 3 * self.n_mixture_components, 64, 64),  # TODO: replace with height width from settings
+            lambda x: x.view(
+                -1, 3, 3 * self.n_mixture_components,
+                settings.HEIGHT, settings.WIDTH
+            ),
             lambda x: x.permute(0, 1, 3, 4, 2),
             lambda x: x.chunk(3, dim=-1),
-            lambda logits, loc, unlimited_scale: (
+            lambda logits, unlimited_loc, unlimited_scale: (
                 logits,
-                loc,
-                # torch.tanh(unlimited_loc),
+                torch.tanh(unlimited_loc),
                 F.softplus(unlimited_scale),
             ),
         )

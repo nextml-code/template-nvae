@@ -1,6 +1,6 @@
 - package: nvae-package
 
-- model: nvae-model
+- model: nvae-mixture-logistic
   sourcecode:
     - '*.py'
     - 'vae/splits/*.json'
