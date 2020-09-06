@@ -57,7 +57,14 @@ class PredictionBatch(BaseModel):
         distribution = module.MixtureLogistic(
             self.logits[index], self.loc[index], self.scale[index]
         )
-        return Prediction(predicted_image=distribution.mean)
+        samples = distribution.sample((5,))
+        indices = distribution.log_prob(samples).argmax(dim=0)
+        most_likely_sample = (
+            samples.flatten(start_dim=1)
+            [indices.flatten(), torch.arange(indices.numel())]
+            .view(*samples.shape[1:])
+        )
+        return Prediction(predicted_image=most_likely_sample)
 
     def __iter__(self):
         for index in range(len(self)):
