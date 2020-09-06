@@ -93,7 +93,7 @@ def train(config):
         targets=sum([
             [
                 # 10 ** (-2.8 - level_index * 0.1)
-                10 ** (-3.2)
+                10 ** (-2.6)
                 for _ in range(level_size)
             ]
             for level_index, level_size in enumerate(model.level_sizes)

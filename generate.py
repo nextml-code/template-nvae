@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', default=40, type=int)
     parser.add_argument('--n_batches_per_epoch', default=50, type=int)
     parser.add_argument('--n_epochs', default=40, type=int)
-    parser.add_argument('--prior_std', default=0.85, type=float)
+    parser.add_argument('--prior_std', default=1.0, type=float)
 
     config = vars(parser.parse_args())
     config.update(

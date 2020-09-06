@@ -5,8 +5,8 @@ learning purposes. Will be improved on continually.
 
 Images generated with prior standard deviation (aka temperature) from 0.1
 to 1.1 (top to bottom) after first updating batch norms with samples
-generated with prior standard deviation 0.85.
-![Generated images with different temperatures](assets/prior_std85.png)
+generated with prior standard deviation 1.0.
+![Generated images with different temperatures](assets/prior_std100.png)
 
 ## Installation
 ```
