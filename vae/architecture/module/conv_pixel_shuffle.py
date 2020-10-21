@@ -8,20 +8,20 @@ class ConvPixelShuffle(nn.Module):
         in_channels,
         out_channels,
         upscale_factor=2,
-        kernel_size=3,
-        padding=1,
     ):
         super().__init__()
         self.convolution = torch.nn.Conv2d(
             in_channels,
             out_channels * upscale_factor ** 2,
-            kernel_size=kernel_size,
-            padding=padding,
+            kernel_size=1,
+            padding=0,
         )
 
         self.upsampled = torch.nn.PixelShuffle(upscale_factor)
         self.initializer = torch.nn.init.kaiming_normal_
-        self.icnr_initialization(self.convolution.weight.data)
+        self.convolution.weight.data = (
+            self.icnr_initialization(self.convolution.weight.data)
+        )
 
     def icnr_initialization(self, tensor):
         if self.upsampled.upscale_factor == 1:
