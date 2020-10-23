@@ -1,4 +1,6 @@
 - package: nvae-package
+  data-files:
+    - vae/splits/*.json
 
 - model: nvae-mixture-logistic
   sourcecode:
