@@ -2,20 +2,15 @@ import os
 from functools import partial
 import numpy as np
 import torch
-import torch.nn.functional as F
 import ignite
 import workflow
 from workflow.torch import set_seeds, module_eval
 from workflow.ignite import worker_init
-from workflow.ignite.handlers.learning_rate import (
-    LearningRateScheduler, warmup, cyclical
-)
-from datastream import Datastream
 from simple_pid import PID
 from pydantic import BaseModel
 from typing import List
 
-from vae import datastream, architecture, metrics
+from vae import datastream, architecture, metrics, log_examples
 
 torch.backends.cudnn.benchmark = True
 
@@ -192,95 +187,17 @@ def train(config):
         config,
     ).attach(trainer, evaluators)
 
-    def log_examples(description):
-        def log_examples_(engine, logger, event_name):
-            n_examples = 5
-            indices = np.random.choice(
-                len(engine.state.output['predictions']),
-                n_examples,
-                replace=False,
-            )
-
-            logger.writer.add_images(
-                f'{description}/predictions',
-                np.stack([
-                    np.concatenate([
-                        np.array(
-                            engine.state.output['examples'][index]
-                            .representation()
-                        ),
-                        np.array(
-                            engine.state.output['predictions'][index]
-                            .representation()
-                        ),
-                    ], axis=0) / 255
-                    for index in indices
-                ]),
-                trainer.state.epoch,
-                dataformats='NHWC',
-            )
-
-            with torch.no_grad(), module_eval(model) as eval_model:
-                std_samples = [
-                    eval_model.generated(16, prior_std)
-                    for prior_std in np.linspace(0.4, 1.1, num=8)
-                ]
-
-            logger.writer.add_images(
-                f'{description}/samples',
-                np.stack([np.concatenate([
-                    np.concatenate([
-                        np.array(sample.representation())
-                        for sample in samples
-                    ], axis=1)
-                    for samples in std_samples
-                ], axis=0)]) / 255,
-                trainer.state.epoch,
-                dataformats='NHWC',
-            )
-
-            with torch.no_grad(), module_eval(model) as eval_model:
-                partial_samples = [
-                    eval_model.partially_generated(
-                        architecture.FeaturesBatch.from_examples(
-                            [
-                                engine.state.output['examples'][index]
-                                for index in indices
-                            ]
-                        ).image_batch,
-                        sample=[
-                            index == sample_index
-                            for index in range(model.levels)
-                        ],
-                        prior_std=0.7,
-                    )
-                    for sample_index in range(model.levels)
-                ]
-
-            logger.writer.add_images(
-                f'{description}/partially_sampled',
-                np.concatenate([
-                    np.stack([
-                        np.array(sample.representation())
-                        for sample in samples
-                    ])
-                    for samples in partial_samples
-                ], axis=1) / 255,
-                trainer.state.epoch,
-                dataformats='NHWC',
-            )                    
-
-        return log_examples_
-    
     tensorboard_logger.attach(
         trainer,
-        log_examples('train'),
+        log_examples('train', trainer, model),
         ignite.engine.Events.EPOCH_COMPLETED,
     )
 
     for name, evaluator in evaluators.items():
         tensorboard_logger.attach(
-            evaluator, log_examples(name), ignite.engine.Events.EPOCH_COMPLETED
+            evaluator,
+            log_examples(name, trainer, model),
+            ignite.engine.Events.EPOCH_COMPLETED,
         )
 
     trainer.run(
