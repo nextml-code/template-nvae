@@ -3,7 +3,7 @@ from PIL import Image
 import pandas as pd
 from datastream import Dataset
 
-from vae import problem, splits
+from vae import problem
 
 
 def dataframe():
@@ -30,25 +30,12 @@ def dataset(dataframe):
     )
 
 
-def evaluate_datasets(frozen=True):
-    datasets = (
+def datasets(frozen=True):
+    return (
         dataset(dataframe())
         .split(
             key_column='key',
             proportions=dict(train=0.8, compare=0.2),
-            # filepath=splits.compare,
-            # frozen=frozen,
-            # don't save split until we have a solution for remote training
-            # guild is not saving .json as sourcecode to remote
             seed=177,
         )
-    )
-    # TODO: temporary
-    return dict(
-        train=datasets['train'],
-        compare=datasets['compare'].split(
-            key_column='key',
-            proportions=dict(keep=0.05, throw=0.95),
-            seed=523,
-        )['keep'],
     )

@@ -1,14 +1,12 @@
-import numpy as np
 from datastream import Datastream
 
-from vae.datastream import (
-    evaluate_datastreams, augmenter
-)
+from vae import datastream
+from vae.datastream import augmenter
 
 
-def GradientDatastream():    
+def GradientDatastream():
     augmenter_ = augmenter()
     return (
-        evaluate_datastreams()['gradient']
+        Datastream(datastream.datasets()['gradient'])
         .map(lambda example: example.augment(augmenter_))
     )

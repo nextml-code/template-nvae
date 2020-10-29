@@ -3,7 +3,6 @@
 - model: nvae-mixture-logistic
   sourcecode:
     - '*.py'
-    - 'vae/splits/*.json'
     - guild.yml
     - exclude:
         dir:
